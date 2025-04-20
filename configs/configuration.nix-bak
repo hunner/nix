@@ -1,0 +1,153 @@
+# Enable the OpenSSH daemon.
+# services.openssh.enable = true;
+
+# Open ports in the firewall.
+# networking.firewall.allowedTCPPorts = [ ... ];
+# networking.firewall.allowedUDPPorts = [ ... ];
+# Or disable the firewall altogether.
+# networking.firewall.enable = false;
+
+# Copy the NixOS configuration file and link it from the resulting system
+# (/run/current-system/configuration.nix). This is useful in case you
+# accidentally delete configuration.nix.
+# system.copySystemConfiguration = true;
+{ config, pkgs, lib, ... }:
+
+{
+  imports =
+    [
+      ./hardware-configuration.nix
+    ];
+
+  boot.loader.grub.enable = true;
+
+  # Enable ZFS support
+  boot.supportedFilesystems = [ "zfs" ];
+  boot.zfs.requestEncryptionCredentials = true;
+
+  # ZFS filesystem configuration
+  # Assuming you've created these datasets during installation
+  fileSystems = {
+    "/" = {
+      device = "rpool/root";
+      fsType = "zfs";
+    };
+
+    "/nix" = {
+      device = "rpool/nix";
+      fsType = "zfs";
+    };
+
+    "/boot" = {
+      device = "/dev/disk/by-label/BOOT";
+      fsType = "vfat";
+    };
+
+    "/home" = {
+      device = "rpool/home";
+      fsType = "zfs";
+      neededForBoot = true;
+    };
+
+    "/persist" = {
+      device = "rpool/persist";
+      fsType = "zfs";
+      neededForBoot = true;
+    };
+
+    "/var/lib/docker" = {
+      device = "rpool/docker";
+      fsType = "zfs";
+    };
+  };
+
+  # Impermanence configuration
+  environment.persistence."/persist" = {
+    hideMounts = true;
+    directories = [
+      "/root"
+      "/etc/nixos"
+      "/etc/ssh"
+      "/var/log"
+      "/var/lib/NetworkManager"
+    ];
+    files = [
+      "/etc/machine-id"
+      "/etc/nix/id_rsa"
+    ];
+  };
+
+  # Create tmpfs for root to implement impermanence
+  boot.initrd.postDeviceCommands = lib.mkAfter ''
+    zfs rollback -r rpool/local/root@blank
+  '';
+
+  # Docker configuration
+  virtualisation.docker = {
+    enable = true;
+    extraOptions = "--storage-driver=overlay2";
+  };
+
+  # System packages
+  environment.systemPackages = with pkgs; [
+    git
+    vim
+    wget
+    curl
+    htop
+    zfs
+    docker-compose
+  ];
+
+  # User configuration
+  users.users.hunner = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "docker" "networkmanager" ];
+    # For impermanence, store home directory configuration
+    home = "/home/hunner";
+    createHome = true;
+  };
+
+  # Home manager integration for persistent home configuration (optional)
+  # home-manager.users.hunner = { pkgs, ... }: {
+  #   home.persistence."/persist/home/hunner" = {
+  #     directories = [
+  #       "Downloads"
+  #       "Documents"
+  #       "Pictures"
+  #       "Videos"
+  #       ".ssh"
+  #       ".config"
+  #     ];
+  #     files = [
+  #       ".bash_history"
+  #     ];
+  #   };
+  # };
+
+  # Networking
+  networking = {
+    hostName = "cryostation";
+    hostId = "a20e391e"; # Required for ZFS
+    networkmanager.enable = true;
+  };
+
+  # Time zone and locale
+  time.timeZone = "America/Los_Angeles"; # Adjust to your timezone
+  i18n.defaultLocale = "en_US.UTF-8";
+
+  services.openssh.enable = true;
+  # Enable ZFS auto-snapshot service
+  # services.zfs.autoSnapshot = {
+  #   enable = true;
+  #   frequent = 4;
+  #   hourly = 24;
+  #   daily = 7;
+  #   weekly = 4;
+  #   monthly = 12;
+  # };
+
+  # This value determines the NixOS release
+  system.stateVersion = "24.11";
+}
+
