@@ -21,17 +21,12 @@
                 mountOptions = [ "umask=0077" "defaults" ];
               };
             };
-            cryptswap = {
+            swap = {
               size = "70G";
-	      type = "8300";
+	      type = "8200";
               content = {
-                type = "luks";
-		name = "cryptswap";
-		passwordFile = "/tmp/secret.key";
-		content = {
-		  type = "swap";
-		  resumeDevice = true;
-		};
+                type = "swap";
+		resumeDevice = true;
               };
             };
             cryptroot = {

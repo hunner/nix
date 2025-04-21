@@ -15,9 +15,9 @@ in
     loader.systemd-boot.enable = true;
     loader.efi.canTouchEfiVariables = true;
     #initrd.luks.devices."cryptroot".device = "/dev/disk/by-partlabel/cryptroot";
-    initrd.luks.devices."cryptswap".device = "/dev/disk/by-partlabel/cryptswap";
+    #initrd.luks.devices."cryptswap".device = "/dev/disk/by-partlabel/cryptswap";
 
-    resumeDevice = "/dev/mapper/cryptswap";
+    resumeDevice = "/dev/nvme0n1p2";
     kernelParams = [
       "resume_offset=0"
       "mem_sleep_default=deep"
@@ -31,8 +31,6 @@ in
       options = [ "defaults" "size=4G" "mode=755" ];
     };
     "/persist" = {
-      device = "/dev/disk/by-uuid/64d32a97-9d65-4562-9c3c-f19935c04be5";
-      fsType = "btrfs";
       neededForBoot = true;
     };
   };
