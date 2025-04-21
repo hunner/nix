@@ -19,51 +19,45 @@
     };
 
   fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/C86C-8A59";
+    { device = "/dev/disk/by-uuid/963D-7FF2";
       fsType = "vfat";
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
   fileSystems."/home" =
-    { device = "/dev/disk/by-uuid/7bdece95-b369-4d57-b405-70338fd9cd54";
+    { device = "/dev/disk/by-uuid/64d32a97-9d65-4562-9c3c-f19935c04be5";
       fsType = "btrfs";
       options = [ "subvol=home" ];
     };
 
-  boot.initrd.luks.devices."cryptroot".device = "/dev/disk/by-uuid/196ffcae-d171-482c-8b90-dda60c0d4f86";
+  boot.initrd.luks.devices."cryptroot".device = "/dev/disk/by-uuid/3e59f9f8-065f-4778-a08e-dc361fc8c3a5";
 
   fileSystems."/nix" =
-    { device = "/dev/disk/by-uuid/7bdece95-b369-4d57-b405-70338fd9cd54";
+    { device = "/dev/disk/by-uuid/64d32a97-9d65-4562-9c3c-f19935c04be5";
       fsType = "btrfs";
       options = [ "subvol=nix" ];
     };
 
   fileSystems."/persist" =
-    { device = "/dev/disk/by-uuid/7bdece95-b369-4d57-b405-70338fd9cd54";
+    { device = "/dev/disk/by-uuid/64d32a97-9d65-4562-9c3c-f19935c04be5";
       fsType = "btrfs";
       options = [ "subvol=persist" ];
     };
 
-  fileSystems."/swap" =
-    { device = "/dev/disk/by-uuid/7bdece95-b369-4d57-b405-70338fd9cd54";
-      fsType = "btrfs";
-      options = [ "subvol=swap" ];
-    };
-
   fileSystems."/var/lib" =
-    { device = "/dev/disk/by-uuid/7bdece95-b369-4d57-b405-70338fd9cd54";
+    { device = "/dev/disk/by-uuid/64d32a97-9d65-4562-9c3c-f19935c04be5";
       fsType = "btrfs";
       options = [ "subvol=var/lib" ];
     };
 
   fileSystems."/var/log" =
-    { device = "/dev/disk/by-uuid/7bdece95-b369-4d57-b405-70338fd9cd54";
+    { device = "/dev/disk/by-uuid/64d32a97-9d65-4562-9c3c-f19935c04be5";
       fsType = "btrfs";
       options = [ "subvol=var/log" ];
     };
 
   swapDevices =
-    [ { device = "/dev/disk/by-uuid/0137a60e-9a7c-4682-9bb8-9c05f996b9af"; }
+    [ { device = "/dev/disk/by-uuid/05e71820-86a3-44d2-86e5-14738b3283b4"; }
     ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking

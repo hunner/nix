@@ -31,7 +31,7 @@ in
       options = [ "defaults" "size=4G" "mode=755" ];
     };
     "/persist" = {
-      device = "/dev/disk/by-uuid/7bdece95-b369-4d57-b405-70338fd9cd54";
+      device = "/dev/disk/by-uuid/64d32a97-9d65-4562-9c3c-f19935c04be5";
       fsType = "btrfs";
       neededForBoot = true;
     };
