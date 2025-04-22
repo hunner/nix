@@ -3,6 +3,10 @@
 
 let
   impermanence = builtins.fetchTarball "https://github.com/nix-community/impermanence/archive/master.tar.gz";
+  unstable = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz") {
+    config = config.nixpkgs.config;
+    overlays = config.nixpkgs.overlays;
+  };
 in
 {
   imports =
@@ -28,7 +32,7 @@ in
     "/" = {
       device = "none";
       fsType = "tmpfs";
-      options = [ "defaults" "size=4G" "mode=755" ];
+      options = [ "defaults" "size=17G" "mode=755" ];
     };
     "/persist" = {
       neededForBoot = true;
@@ -36,7 +40,7 @@ in
   };
 
   networking.hostId = "3294c9a2"; # Required for ZFS
-  networking.hostName = "cryochamber";
+  networking.hostName = "liminal";
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   environment.persistence."/persist" = {
@@ -45,6 +49,7 @@ in
       "/root"
       "/etc/nixos"
       "/etc/ssh"
+      "/etc/NetworkManager/system-connections"
     ];
     files = [
       "/etc/machine-id"
@@ -56,6 +61,10 @@ in
   #rsync -azPH /mnt/etc/nixos/ /mnt/persist/etc/nixos
   #rsync -azPH /mnt/etc/ssh/ /mnt/persist/etc/ssh
   #cp /mnt/etc/machine-id /mnt/persist/etc/machine-id
+  security.sudo.extraConfig = ''
+    # Don't lecture after reboot
+    Defaults lecture = never
+  '';
 
   networking.networkmanager.enable = true;
 
@@ -92,6 +101,11 @@ in
   services.xserver.displayManager.gdm.enable = true;
   services.xserver.desktopManager.gnome.enable = true;
 
+  services.xserver.windowManager.xmonad = {
+    enable = true;
+    enableContribAndExtras = true;
+  };
+
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us";
@@ -100,6 +114,10 @@ in
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
+
+  # Enable bluetooth
+  hardware.bluetooth.enable = true;
+  services.blueman.enable = true;
 
   # Enable sound with pipewire.
   hardware.pulseaudio.enable = false;
@@ -124,16 +142,22 @@ in
   users.users.hunner = {
     isNormalUser = true;
     description = "Hunter Haugen";
-    extraGroups = [ "docker" "networkmanager" "wheel" ];
+    extraGroups = [ "docker" "networkmanager" "wheel" "audio" ];
     hashedPassword = "$y$j9T$hLqdzlz7dbJZgUnKs.eo3/$25s/2X18vGtDKj53qD1sn/.Omp/6CBJWbn7d9KAiOK7";
     shell = pkgs.zsh;
     packages = with pkgs; [
-    #  thunderbird
+      neovim
+      asdf-vm
+      pinentry-gtk2
+      gnupg
+      zoom-us
+      firefox-devedition
+      nodejs
     ];
   };
 
   # Enable automatic login for the user.
-  services.displayManager.autoLogin.enable = true;
+  services.displayManager.autoLogin.enable = false;
   services.displayManager.autoLogin.user = "hunner";
 
   # Workaround for GNOME autologin: https://github.com/NixOS/nixpkgs/issues/103746#issuecomment-945091229
@@ -149,8 +173,6 @@ in
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-  #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-  #  wget
     git
     vim
     wget
@@ -158,7 +180,39 @@ in
     htop
     zfs
     tmux
+    file
+    ripgrep
     docker-compose
+    alacritty
+    rofi
+    xlockmore
+    dzen2
+    arandr
+    xorg.xrandr
+    xorg.xsetroot
+    xorg.xset
+    hsetroot
+    redshift
+    flameshot
+    #code-cursor
+    unstable.code-cursor
+    pwvucontrol
+    helvum
+  ];
+
+  services.clipmenu.enable = true;
+  programs.direnv = {
+    enable = true;
+    package = unstable.direnv;
+    nix-direnv.enable = true;
+    nix-direnv.package = unstable.nix-direnv;
+  };
+  programs._1password.enable = true;
+  programs._1password-gui.enable = true;
+
+  fonts.packages = with pkgs; [
+    nerdfonts
+    liberation_ttf
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -179,6 +233,29 @@ in
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
+  systemd.services.upower.enable = true;
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true; # Enable NSS lookup for .local domains
+    openFirewall = true;
+    publish = {
+      enable = true;
+      addresses = true;
+      domain = true;
+      workstation = true;
+    };
+  };
+
+  services.fprintd.enable = true;
+  #security.pam.services = {
+  #  login.fprintAuth = true;
+  #  xscreensaver.fprintAuth = true;
+  #  sudo.fprintAuth = true;
+  #  #gdm.fprintAuth = true;
+  #  gdm-password.fprintAuth = true;
+  #};
+
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
