@@ -41,7 +41,12 @@ in
 
   networking.hostId = "3294c9a2"; # Required for ZFS
   networking.hostName = "liminal";
+  networking.networkmanager.enable = true;
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  networking.extraHosts =
+    ''
+      127.0.0.1 keycloak
+    '';
 
   environment.persistence."/persist" = {
     hideMounts = true;
@@ -65,8 +70,6 @@ in
     # Don't lecture after reboot
     Defaults lecture = never
   '';
-
-  networking.networkmanager.enable = true;
 
   # Set your time zone.
   time.timeZone = "America/Los_Angeles";
@@ -93,6 +96,8 @@ in
   programs.zsh.enable = true;
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "yes";
+  services.tailscale.enable = true;
+  hardware.brillo.enable = true;
 
   # Enable the X11 windowing system.
   services.xserver.enable = true;
@@ -142,7 +147,7 @@ in
   users.users.hunner = {
     isNormalUser = true;
     description = "Hunter Haugen";
-    extraGroups = [ "docker" "networkmanager" "wheel" "audio" ];
+    extraGroups = [ "docker" "networkmanager" "wheel" "audio" "video" ];
     hashedPassword = "$y$j9T$hLqdzlz7dbJZgUnKs.eo3/$25s/2X18vGtDKj53qD1sn/.Omp/6CBJWbn7d9KAiOK7";
     shell = pkgs.zsh;
     packages = with pkgs; [
@@ -150,10 +155,26 @@ in
       asdf-vm
       pinentry-gtk2
       gnupg
-      zoom-us
+      unstable.zoom-us
       firefox-devedition
       nodejs
+      slack
     ];
+  };
+  systemd.user.services = {
+    polkit-agent = {
+      description = "PolKit Authentication Agent";
+      wantedBy = [ "graphical-session.target" ];
+      wants = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      serviceConfig = {
+        Type = "simple";
+        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+        Restart = "on-failure";
+        RestartSec = 1;
+        TimeoutStopSec = 10;
+      };
+    };
   };
 
   # Enable automatic login for the user.
@@ -173,12 +194,15 @@ in
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
+    jq
+    yq
+    bat
     git
     vim
+    emacs
     wget
     curl
     htop
-    zfs
     tmux
     file
     ripgrep
@@ -188,6 +212,10 @@ in
     xlockmore
     dzen2
     arandr
+    xclip
+    shellcheck
+    scrot
+    fd
     xorg.xrandr
     xorg.xsetroot
     xorg.xset
@@ -197,10 +225,22 @@ in
     #code-cursor
     unstable.code-cursor
     pwvucontrol
+    pamixer
     helvum
   ];
 
   services.clipmenu.enable = true;
+  services.picom = {
+    enable = true;
+    settings = {
+      inactive-opacity = 1.0;
+      inactive-dim = 0.0;
+      inactive-opacity-override = false;
+      frame-opacity = 1.0;
+      inactive-dim-fixed = false;
+      fading = false;  # Optional, if you want to disable fading as well
+    };
+  };
   programs.direnv = {
     enable = true;
     package = unstable.direnv;
@@ -209,6 +249,7 @@ in
   };
   programs._1password.enable = true;
   programs._1password-gui.enable = true;
+  programs._1password-gui.polkitPolicyOwners = [ "hunner" ];
 
   fonts.packages = with pkgs; [
     nerdfonts
@@ -245,6 +286,11 @@ in
       workstation = true;
     };
   };
+  services.dbus = {
+    enable = true;
+    packages = [ pkgs.polkit ];
+  };
+  security.polkit.enable = true;
 
   services.fprintd.enable = true;
   #security.pam.services = {
@@ -266,3 +312,4 @@ in
   system.stateVersion = "24.11"; # Did you read the comment?
 
 }
+# vim: ft=nix ai
