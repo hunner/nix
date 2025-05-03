@@ -2,15 +2,19 @@
 { config, pkgs, lib, ... }:
 
 let
+  nixos-hardware = builtins.fetchTarball "https://github.com/NixOS/nixos-hardware/archive/master.tar.gz";
   impermanence = builtins.fetchTarball "https://github.com/nix-community/impermanence/archive/master.tar.gz";
   unstable = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz") {
     config = config.nixpkgs.config;
     overlays = config.nixpkgs.overlays;
   };
+  hp15c = pkgs.callPackage ./pkgs/hp15c/default.nix { inherit unstable; };
+  #nonpareil = pkgs.callPackage ./pkgs/nonpareil/default.nix { inherit pkgs; };
 in
 {
   imports =
     [
+      "${nixos-hardware}/framework/16-inch/7040-amd"
       ./hardware-configuration.nix
       "${impermanence}/nixos.nix"
     ];
@@ -27,6 +31,8 @@ in
       "mem_sleep_default=deep"
     ];
   };
+  services.fwupd.enable = true;
+  hardware.framework.enableKmod = true;
 
   fileSystems = {
     "/" = {
@@ -124,6 +130,11 @@ in
   hardware.bluetooth.enable = true;
   services.blueman.enable = true;
 
+  services.logind = {
+    extraConfig = "HandlePowerKey=suspend";
+    lidSwitch = "suspend";
+  };
+
   # Enable sound with pipewire.
   hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
@@ -143,7 +154,7 @@ in
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
+  # Define a user account. Don't forget to set a password with 'passwd'.
   users.users.hunner = {
     isNormalUser = true;
     description = "Hunter Haugen";
@@ -151,6 +162,7 @@ in
     hashedPassword = "$y$j9T$hLqdzlz7dbJZgUnKs.eo3/$25s/2X18vGtDKj53qD1sn/.Omp/6CBJWbn7d9KAiOK7";
     shell = pkgs.zsh;
     packages = with pkgs; [
+      fzf
       neovim
       asdf-vm
       pinentry-gtk2
@@ -159,6 +171,9 @@ in
       firefox-devedition
       nodejs
       slack
+      obs-studio
+      mplayer
+      ffmpeg
     ];
   };
   systemd.user.services = {
@@ -227,6 +242,9 @@ in
     pwvucontrol
     pamixer
     helvum
+    hp15c
+    #nonpareil
+    unstable.framework-tool
   ];
 
   services.clipmenu.enable = true;
@@ -290,6 +308,7 @@ in
     enable = true;
     packages = [ pkgs.polkit ];
   };
+  programs.dconf.enable = true;
   security.polkit.enable = true;
 
   services.fprintd.enable = true;
@@ -305,7 +324,7 @@ in
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
+  # on your system were taken. It's perfectly fine and recommended to leave
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
