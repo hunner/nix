@@ -22,8 +22,8 @@ in
   boot = {
     loader.systemd-boot.enable = true;
     loader.efi.canTouchEfiVariables = true;
-    #initrd.luks.devices."cryptroot".device = "/dev/disk/by-partlabel/cryptroot";
-    #initrd.luks.devices."cryptswap".device = "/dev/disk/by-partlabel/cryptswap";
+    #initrd.luks.devices."cryptroot".device = "/dev/disk/by-partlabel/disk-nvme0n1-cryptroot";
+    initrd.luks.devices."cryptswap".device = "/dev/disk/by-partlabel/disk-nvme0n1-swap";
 
     resumeDevice = "/dev/nvme0n1p2";
     kernelParams = [
@@ -31,6 +31,9 @@ in
       "mem_sleep_default=deep"
     ];
   };
+  swapDevices = [ {
+    device = "/dev/mapper/cryptswap";
+  } ];
   services.fwupd.enable = true;
   hardware.framework.enableKmod = true;
 
@@ -99,6 +102,7 @@ in
     enable = true;
     extraOptions = "--storage-driver=overlay2";
   };
+  programs.hyprland.enable = true;
   programs.zsh.enable = true;
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "yes";
@@ -110,6 +114,8 @@ in
 
   # Enable the GNOME Desktop Environment.
   services.xserver.displayManager.gdm.enable = true;
+  services.xserver.displayManager.gdm.wayland = true;
+  services.xserver.displayManager.gdm.autoSuspend = true;
   services.xserver.desktopManager.gnome.enable = true;
 
   services.xserver.windowManager.xmonad = {
@@ -152,7 +158,8 @@ in
   };
 
   # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
+  services.libinput.enable = true;
+  services.touchegg.enable = true;
 
   # Define a user account. Don't forget to set a password with 'passwd'.
   users.users.hunner = {
@@ -174,6 +181,8 @@ in
       obs-studio
       mplayer
       ffmpeg
+      jetbrains-toolbox
+      pass
     ];
   };
   systemd.user.services = {
@@ -245,6 +254,10 @@ in
     hp15c
     #nonpareil
     unstable.framework-tool
+    kitty # for Hyprland
+    unstable._1password-gui
+    unstable._1password-cli
+    restic
   ];
 
   services.clipmenu.enable = true;
