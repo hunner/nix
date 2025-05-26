@@ -8,8 +8,27 @@ let
     config = config.nixpkgs.config;
     overlays = config.nixpkgs.overlays;
   };
+  #unstable = import nixos-unstable {
+  #  #config = config.nixpkgs.config;
+  #  inherit (pkgs) system;
+  #};
   hp15c = pkgs.callPackage ./pkgs/hp15c/default.nix { inherit unstable; };
   #nonpareil = pkgs.callPackage ./pkgs/nonpareil/default.nix { inherit pkgs; };
+  custom1Password = pkgs.symlinkJoin {
+    name = "1password-gui-custom";
+    paths = [ unstable._1password-gui ];
+    buildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      # Create directory for our custom policy
+      mkdir -p $out/share/polkit-1/actions/
+
+      # Copy the original policy file
+      cp ${unstable._1password-gui}/share/polkit-1/actions/com.1password.1Password.policy $out/share/polkit-1/actions/
+
+      # Modify the policy file to add the annotation
+      sed -i '/<action id="com.1password.1Password.unlock">/,/<\/action>/ s|<\/defaults>|<\/defaults>\n      <annotate key="org.freedesktop.policykit.owner">unix-user:hunner<\/annotate>|' $out/share/polkit-1/actions/com.1password.1Password.policy
+    '';
+  };
 in
 {
   imports =
@@ -106,7 +125,14 @@ in
   programs.zsh.enable = true;
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "yes";
-  services.tailscale.enable = true;
+  services.tailscale = {
+    enable = true;
+    useRoutingFeatures = "client";
+    extraUpFlags = [
+      "--accept-dns"
+      "--accept-routes"
+    ];
+  };
   hardware.brillo.enable = true;
 
   # Enable the X11 windowing system.
@@ -127,6 +153,13 @@ in
   services.xserver.xkb = {
     layout = "us";
     variant = "";
+  };
+
+  xdg.portal = {
+    enable = true;
+    extraPortals = [
+      pkgs.xdg-desktop-portal-gtk
+    ];
   };
 
   # Enable CUPS to print documents.
@@ -183,6 +216,8 @@ in
       ffmpeg
       jetbrains-toolbox
       pass
+      diff-so-fancy
+      unstable.webex
     ];
   };
   systemd.user.services = {
@@ -231,6 +266,7 @@ in
     file
     ripgrep
     docker-compose
+    powertop
     alacritty
     rofi
     xlockmore
@@ -255,9 +291,9 @@ in
     #nonpareil
     unstable.framework-tool
     kitty # for Hyprland
-    unstable._1password-gui
-    unstable._1password-cli
     restic
+    xscreensaver
+    unzip
   ];
 
   services.clipmenu.enable = true;
@@ -278,9 +314,21 @@ in
     nix-direnv.enable = true;
     nix-direnv.package = unstable.nix-direnv;
   };
-  programs._1password.enable = true;
-  programs._1password-gui.enable = true;
-  programs._1password-gui.polkitPolicyOwners = [ "hunner" ];
+  programs._1password = {
+    enable = true;
+    package = unstable._1password-cli;
+  };
+  #programs._1password-gui = {
+  #  enable = true;
+  #  package = unstable._1password-gui;
+  #  polkitPolicyOwners = [ "hunner" ];
+  #};
+  programs._1password-gui = {
+    enable = true;
+    # Use a custom package that includes our modified policy
+    package = unstable._1password-gui; #custom1Password;
+  };
+
 
   fonts.packages = with pkgs; [
     nerdfonts
