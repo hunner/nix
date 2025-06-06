@@ -12,23 +12,23 @@ let
   #  #config = config.nixpkgs.config;
   #  inherit (pkgs) system;
   #};
-  hp15c = pkgs.callPackage ./pkgs/hp15c/default.nix { inherit unstable; };
+  #hp15c = pkgs.callPackage ./pkgs/hp15c/default.nix { inherit unstable; };
   #nonpareil = pkgs.callPackage ./pkgs/nonpareil/default.nix { inherit pkgs; };
-  custom1Password = pkgs.symlinkJoin {
-    name = "1password-gui-custom";
-    paths = [ unstable._1password-gui ];
-    buildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      # Create directory for our custom policy
-      mkdir -p $out/share/polkit-1/actions/
+  #custom1Password = pkgs.symlinkJoin {
+  #  name = "1password-gui-custom";
+  #  paths = [ unstable._1password-gui ];
+  #  buildInputs = [ pkgs.makeWrapper ];
+  #  postBuild = ''
+  #    # Create directory for our custom policy
+  #    mkdir -p $out/share/polkit-1/actions/
 
-      # Copy the original policy file
-      cp ${unstable._1password-gui}/share/polkit-1/actions/com.1password.1Password.policy $out/share/polkit-1/actions/
+  #    # Copy the original policy file
+  #    cp ${unstable._1password-gui}/share/polkit-1/actions/com.1password.1Password.policy $out/share/polkit-1/actions/
 
-      # Modify the policy file to add the annotation
-      sed -i '/<action id="com.1password.1Password.unlock">/,/<\/action>/ s|<\/defaults>|<\/defaults>\n      <annotate key="org.freedesktop.policykit.owner">unix-user:hunner<\/annotate>|' $out/share/polkit-1/actions/com.1password.1Password.policy
-    '';
-  };
+  #    # Modify the policy file to add the annotation
+  #    sed -i '/<action id="com.1password.1Password.unlock">/,/<\/action>/ s|<\/defaults>|<\/defaults>\n      <annotate key="org.freedesktop.policykit.owner">unix-user:hunner<\/annotate>|' $out/share/polkit-1/actions/com.1password.1Password.policy
+  #  '';
+  #};
 in
 {
   imports =
@@ -65,6 +65,19 @@ in
     "/persist" = {
       neededForBoot = true;
     };
+  };
+
+  hardware.amdgpu = {
+    opencl.enable = true;
+    amdvlk.enable = true;
+  };
+  hardware.graphics.enable = true;
+  services.xserver.videoDrivers = [ "amdgpu" ];
+  services.ollama = {
+    enable = true;
+    loadModels = [ "gemma3" ];
+    acceleration = "rocm";
+    rocmOverrideGfx = "11.0.3";
   };
 
   networking.hostId = "3294c9a2"; # Required for ZFS
@@ -157,7 +170,9 @@ in
 
   xdg.portal = {
     enable = true;
+    xdgOpenUsePortal = true;
     extraPortals = [
+      pkgs.xdg-desktop-portal-wlr
       pkgs.xdg-desktop-portal-gtk
     ];
   };
@@ -175,7 +190,7 @@ in
   };
 
   # Enable sound with pipewire.
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
@@ -207,17 +222,21 @@ in
       asdf-vm
       pinentry-gtk2
       gnupg
-      unstable.zoom-us
+      #unstable.zoom-us
       firefox-devedition
       nodejs
       slack
-      obs-studio
       mplayer
       ffmpeg
       jetbrains-toolbox
       pass
       diff-so-fancy
-      unstable.webex
+      webex
+      unstable.zed-editor
+      unstable.package-version-server
+      amdgpu_top
+      nixd # for zed
+      goose-cli
     ];
   };
   systemd.user.services = {
@@ -279,21 +298,24 @@ in
     xorg.xrandr
     xorg.xsetroot
     xorg.xset
+    xorg.xev
     hsetroot
     redshift
     flameshot
-    #code-cursor
     unstable.code-cursor
     pwvucontrol
     pamixer
     helvum
-    hp15c
+    #hp15c
     #nonpareil
-    unstable.framework-tool
+    framework-tool
     kitty # for Hyprland
     restic
     xscreensaver
     unzip
+    scarlett2
+    alsa-scarlett-gui
+    xlsx2csv
   ];
 
   services.clipmenu.enable = true;
@@ -310,28 +332,34 @@ in
   };
   programs.direnv = {
     enable = true;
-    package = unstable.direnv;
+    #package = unstable.direnv;
     nix-direnv.enable = true;
-    nix-direnv.package = unstable.nix-direnv;
+    #nix-direnv.package = unstable.nix-direnv;
   };
   programs._1password = {
     enable = true;
-    package = unstable._1password-cli;
+    #package = unstable._1password-cli;
   };
-  #programs._1password-gui = {
-  #  enable = true;
-  #  package = unstable._1password-gui;
-  #  polkitPolicyOwners = [ "hunner" ];
-  #};
   programs._1password-gui = {
     enable = true;
-    # Use a custom package that includes our modified policy
-    package = unstable._1password-gui; #custom1Password;
+    #package = unstable._1password-gui;
+    polkitPolicyOwners = [ "hunner" ];
+  };
+  programs.obs-studio = {
+    enable = true;
+    enableVirtualCamera = true;
+    plugins = with pkgs.obs-studio-plugins; [
+      wlrobs
+      obs-backgroundremoval
+      obs-pipewire-audio-capture
+      obs-ndi
+    ];
   };
 
-
   fonts.packages = with pkgs; [
-    nerdfonts
+    nerd-fonts.droid-sans-mono
+    nerd-fonts.liberation
+    nerd-fonts.jetbrains-mono
     liberation_ttf
   ];
 
@@ -371,6 +399,14 @@ in
   };
   programs.dconf.enable = true;
   security.polkit.enable = true;
+  services.flatpak.enable = true;
+  systemd.services.flatpak-repo = {
+    wantedBy = [ "multi-user.target" ];
+    path = [ pkgs.flatpak ];
+    script = ''
+      flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    '';
+  };
 
   services.fprintd.enable = true;
   #security.pam.services = {
