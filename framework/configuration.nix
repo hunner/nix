@@ -236,7 +236,16 @@ in
       unstable.package-version-server
       amdgpu_top
       nixd # for zed
+      rust-analyzer # for zed
+      nil # for zed
+      rustc # for zed
+      rustup # for zed
+      gcc # for zed
+      ruff # for zed
       goose-cli
+      teams-for-linux
+      claude-code
+      neofetch
     ];
   };
   systemd.user.services = {
@@ -315,7 +324,7 @@ in
     unzip
     scarlett2
     alsa-scarlett-gui
-    xlsx2csv
+    ndi
   ];
 
   services.clipmenu.enable = true;
@@ -396,6 +405,14 @@ in
   services.dbus = {
     enable = true;
     packages = [ pkgs.polkit ];
+  };
+  environment.etc = {
+    "1password/custom_allowed_browsers" = {
+      text = ''
+        firefox-devedition
+      '';
+      mode = "0755";
+    };
   };
   programs.dconf.enable = true;
   security.polkit.enable = true;
