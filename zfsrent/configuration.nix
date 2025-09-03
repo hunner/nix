@@ -103,7 +103,39 @@ in
     zsh
     tmux
     docker-compose
+    lzop # for syncoid
+    pv # for syncoid
+    mbuffer # for syncoid
   ];
+
+  services.zfs.autoScrub = {
+    enable = true;
+    interval = "weekly";
+    pools = [ "tank" ];
+  };
+
+  services.sanoid = {
+    enable = true;
+
+    templates.backup = {
+      frequently = 0;
+      hourly = 0;
+      daily = 30;
+      monthly = 6;
+      yearly = 3;
+      autosnap = false;
+      autoprune = true;
+      recursive = true;
+    };
+
+    datasets."tank" = {
+      useTemplate = [ "backup" ];
+    };
+
+    datasets."rpool/safe" = {
+      useTemplate = [ "backup" ];
+    };
+  };
 
   # Define a user account
   users.users.hunner = {
@@ -126,8 +158,79 @@ in
       tldr
       unzip
       lsof
+      gnupg
     ];
   };
+  users.users.backup = {
+    isNormalUser = true;
+    description = "Backup replication user";
+    shell = pkgs.bash;
+    packages = with pkgs; [
+      sanoid
+    ];
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtgW+cxPjo70k6dkYPqzP0FR5G9zvbArp/85ZHRrMRL backup@cryochamber"
+    ];
+  };
+
+  #services.syncoid = {
+  #  enable = true;
+  #  user = "backup";
+  #  sshKey = "/var/lib/syncoid/.ssh/id_ed25519";
+  #  commonArgs = [
+  #    #"--sshoption=StrictHostKeyChecking=off"
+  #    "--sshoption=UserKnownHostsFile=/var/lib/syncoid/.ssh/known_hosts"
+  #    "--sshoption=IdentitiesOnly=yes"
+  #  ];
+  #  #commands."zima-bitrot" = {
+  #  #  source = "backup@zima:bitrot";
+  #  #  target = "tank/backups/zima/bitrot";
+  #  #  recursive = true;
+  #  #};
+  #  commands."zima-rpool-safe" = {
+  #    source = "backup@zima:rpool/safe";
+  #    target = "tank/backups/zima/rpool-safe";
+  #    recursive = true;
+  #  };
+  #};
+  #systemd.services.syncoid-zima-rpool-safe.serviceConfig = {
+  #  Environment = [
+  #    "HOME=/var/lib/syncoid"
+  #    "SSH_AUTH_SOCK="
+  #  ];
+  #  ExecStartPre = [
+  #    "+${pkgs.coreutils}/bin/mkdir -p /var/lib/syncoid/.ssh"
+  #    "+${pkgs.coreutils}/bin/cp /home/backup/.ssh/id_ed25519 /var/lib/syncoid/.ssh/"
+  #    "+${pkgs.coreutils}/bin/cp /home/backup/.ssh/known_hosts /var/lib/syncoid/.ssh/"
+  #    "+${pkgs.coreutils}/bin/chown -R backup:syncoid /var/lib/syncoid/.ssh"
+  #    "+${pkgs.coreutils}/bin/chmod 700 /var/lib/syncoid/.ssh"
+  #    "+${pkgs.coreutils}/bin/chmod 600 /var/lib/syncoid/.ssh/id_ed25519"
+  #  ];
+  #};
+
+  #systemd.services.syncoid-replication = {
+  #  description = "ZFS syncoid replication";
+  #  path = with pkgs; [ sanoid openssh zfs ];
+  #  wants = [ "network-online.target" ];
+  #  after = [ "network-online.target" "zfs.target" ];
+
+  #  startAt = "03:00";
+
+  #  serviceConfig = {
+  #    Type = "oneshot";
+  #    User = "backup";
+  #    ExecStart = ''
+  #      ${pkgs.sanoid}/bin/syncoid \
+  #        --recursive \
+  #        --create-bookmark \
+  #        --sendoptions=w \
+  #        --source-bwlimit=50000 \
+  #        backup@zima:rpool/safe \
+  #        tank/backups/zima/rpool-safe
+  #    '';
+  #    TimeoutStartSec = "6h";
+  #  };
+  #};
 
   programs.direnv = {
     enable = true;
@@ -136,6 +239,14 @@ in
   programs.zsh.enable = true;
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "prohibit-password";
+  services.openssh.settings.Macs = [
+    "hmac-sha2-512"
+    "hmac-sha2-512-etm@openssh.com"
+    "hmac-sha2-256-etm@openssh.com"
+    "umac-128-etm@openssh.com"
+  ];
+
+  services.tailscale.enable = true;
 
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nixpkgs.config.allowUnfree = true;
