@@ -3,7 +3,7 @@ qemu-system-x86_64 \
   -m 4G \
   -smp 4 \
   -cpu host \
-  -drive file=/home/hunner/Downloads/latest-nixos-minimal-x86_64-linux.iso,media=cdrom \
+  -drive file=/home/hunner/Downloads/nixos-minimal-24.11.716389.c570c1f53044-x86_64-linux.iso,media=cdrom \
   -drive file=disk1.qcow2,format=qcow2,if=virtio \
   -drive file=disk2.qcow2,format=qcow2,if=virtio \
   -boot menu=on,splash-time=5000 \
