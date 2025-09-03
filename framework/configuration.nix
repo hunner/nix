@@ -1,41 +1,12 @@
 # Config for framework16
-{ config, pkgs, lib, ... }:
-
-let
-  nixos-hardware = builtins.fetchTarball "https://github.com/NixOS/nixos-hardware/archive/master.tar.gz";
-  impermanence = builtins.fetchTarball "https://github.com/nix-community/impermanence/archive/master.tar.gz";
-  unstable = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz") {
-    config = config.nixpkgs.config;
-    overlays = config.nixpkgs.overlays;
-  };
-  #unstable = import nixos-unstable {
-  #  #config = config.nixpkgs.config;
-  #  inherit (pkgs) system;
-  #};
-  #hp15c = pkgs.callPackage ./pkgs/hp15c/default.nix { inherit unstable; };
-  #nonpareil = pkgs.callPackage ./pkgs/nonpareil/default.nix { inherit pkgs; };
-  #custom1Password = pkgs.symlinkJoin {
-  #  name = "1password-gui-custom";
-  #  paths = [ unstable._1password-gui ];
-  #  buildInputs = [ pkgs.makeWrapper ];
-  #  postBuild = ''
-  #    # Create directory for our custom policy
-  #    mkdir -p $out/share/polkit-1/actions/
-
-  #    # Copy the original policy file
-  #    cp ${unstable._1password-gui}/share/polkit-1/actions/com.1password.1Password.policy $out/share/polkit-1/actions/
-
-  #    # Modify the policy file to add the annotation
-  #    sed -i '/<action id="com.1password.1Password.unlock">/,/<\/action>/ s|<\/defaults>|<\/defaults>\n      <annotate key="org.freedesktop.policykit.owner">unix-user:hunner<\/annotate>|' $out/share/polkit-1/actions/com.1password.1Password.policy
-  #  '';
-  #};
-in
-{
+{ config, pkgs, lib, nixos-hardware, impermanence, talon-nix, ... }:
+  {
   imports =
     [
-      "${nixos-hardware}/framework/16-inch/7040-amd"
+      nixos-hardware.nixosModules.framework-16-7040-amd
       ./hardware-configuration.nix
-      "${impermanence}/nixos.nix"
+      impermanence.nixosModules.impermanence
+      talon-nix.nixosModules.talon
     ];
 
   boot = {
@@ -87,6 +58,7 @@ in
   networking.extraHosts =
     ''
       127.0.0.1 keycloak
+      127.0.0.1 k3d-cmvm
     '';
 
   environment.persistence."/persist" = {
@@ -135,6 +107,12 @@ in
     extraOptions = "--storage-driver=overlay2";
   };
   programs.hyprland.enable = true;
+  programs.hyprland.xwayland.enable = false;
+  programs.hyprland.withUWSM = true;
+  programs.hyprlock.enable = true;
+  services.hypridle.enable = true;
+  programs.waybar.enable = true;
+  environment.sessionVariables.NIXOS_OZONE_WL = "1"; # hint electron apps to use wayland
   programs.zsh.enable = true;
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "yes";
@@ -174,6 +152,7 @@ in
     extraPortals = [
       pkgs.xdg-desktop-portal-wlr
       pkgs.xdg-desktop-portal-gtk
+      #pkgs.xdg-desktop-portal-hyprland
     ];
   };
 
@@ -232,8 +211,8 @@ in
       pass
       diff-so-fancy
       webex
-      unstable.zed-editor
-      unstable.package-version-server
+      pkgs.unstable.zed-editor
+      pkgs.unstable.package-version-server
       amdgpu_top
       nixd # for zed
       rust-analyzer # for zed
@@ -241,11 +220,28 @@ in
       rustc # for zed
       rustup # for zed
       gcc # for zed
-      ruff # for zed
+      #ruff # for zed
       goose-cli
       teams-for-linux
       claude-code
       neofetch
+      eww
+      hyprpaper # for hyprland
+      hyprcursor # for hyprland
+      nordzy-icon-theme
+      nordzy-cursor-theme
+      wl-clipboard
+      onlyoffice-desktopeditors
+      calibre
+      clipse
+      plex-desktop
+      signal-desktop
+      flyctl
+      dtach
+      gromit-mpx
+      urbanterror
+      ghostty
+      talon-nix.packages.${pkgs.system}.default
     ];
   };
   systemd.user.services = {
@@ -297,6 +293,7 @@ in
     powertop
     alacritty
     rofi
+    wofi
     xlockmore
     dzen2
     arandr
@@ -311,7 +308,7 @@ in
     hsetroot
     redshift
     flameshot
-    unstable.code-cursor
+    pkgs.unstable.code-cursor
     pwvucontrol
     pamixer
     helvum
@@ -319,12 +316,18 @@ in
     #nonpareil
     framework-tool
     kitty # for Hyprland
+    kdePackages.dolphin # file browser in hyprland
+    cliphist
     restic
     xscreensaver
     unzip
     scarlett2
     alsa-scarlett-gui
-    ndi
+    pkgs.unstable.ndi-6
+    xdg-utils
+    btrbk
+    devenv
+    lsof
   ];
 
   services.clipmenu.enable = true;
@@ -341,27 +344,26 @@ in
   };
   programs.direnv = {
     enable = true;
-    #package = unstable.direnv;
     nix-direnv.enable = true;
     #nix-direnv.package = unstable.nix-direnv;
   };
   programs._1password = {
     enable = true;
-    #package = unstable._1password-cli;
   };
   programs._1password-gui = {
     enable = true;
-    #package = unstable._1password-gui;
     polkitPolicyOwners = [ "hunner" ];
   };
   programs.obs-studio = {
     enable = true;
+    package = pkgs.unstable.obs-studio;
     enableVirtualCamera = true;
-    plugins = with pkgs.obs-studio-plugins; [
+    plugins = with pkgs.unstable.obs-studio-plugins; [
       wlrobs
       obs-backgroundremoval
       obs-pipewire-audio-capture
-      obs-ndi
+      #obs-ndi
+      distroav
     ];
   };
 
@@ -369,7 +371,10 @@ in
     nerd-fonts.droid-sans-mono
     nerd-fonts.liberation
     nerd-fonts.jetbrains-mono
+    nerd-fonts.sauce-code-pro
+    nerd-fonts.symbols-only
     liberation_ttf
+    font-awesome
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -379,6 +384,7 @@ in
   #   enable = true;
   #   enableSSHSupport = true;
   # };
+  services.pcscd.enable = true;
 
   # List services that you want to enable:
 
@@ -386,8 +392,8 @@ in
   # services.openssh.enable = true;
 
   # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 ];
+  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
   systemd.services.upower.enable = true;
@@ -424,6 +430,7 @@ in
       flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     '';
   };
+  systemd.services."user@".serviceConfig.Delegate = "cpu io memory pids cpuset";
 
   services.fprintd.enable = true;
   #security.pam.services = {
