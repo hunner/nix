@@ -242,6 +242,9 @@
       urbanterror
       ghostty
       talon-nix.packages.${pkgs.system}.default
+      pyright
+      just
+      yt-dlp
     ];
   };
   systemd.user.services = {
