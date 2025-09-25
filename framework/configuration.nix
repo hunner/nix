@@ -297,7 +297,9 @@
     alacritty
     rofi
     wofi
+    xss-lock
     xlockmore
+    fortune
     dzen2
     arandr
     xclip
