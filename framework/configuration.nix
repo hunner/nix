@@ -1,5 +1,5 @@
 # Config for framework16
-{ config, pkgs, lib, nixos-hardware, impermanence, talon-nix, ... }:
+{ config, pkgs, lib, nixos-hardware, impermanence, talon-nix, plover-flake, beads-flake, ... }:
   {
   imports =
     [
@@ -11,6 +11,7 @@
 
   boot = {
     loader.systemd-boot.enable = true;
+    loader.systemd-boot.configurationLimit = 100;
     loader.efi.canTouchEfiVariables = true;
     #initrd.luks.devices."cryptroot".device = "/dev/disk/by-partlabel/disk-nvme0n1-cryptroot";
     initrd.luks.devices."cryptswap".device = "/dev/disk/by-partlabel/disk-nvme0n1-swap";
@@ -192,7 +193,7 @@
   users.users.hunner = {
     isNormalUser = true;
     description = "Hunter Haugen";
-    extraGroups = [ "docker" "networkmanager" "wheel" "audio" "video" ];
+    extraGroups = [ "docker" "networkmanager" "wheel" "audio" "video" "dialout" ];
     hashedPassword = "$y$j9T$hLqdzlz7dbJZgUnKs.eo3/$25s/2X18vGtDKj53qD1sn/.Omp/6CBJWbn7d9KAiOK7";
     shell = pkgs.zsh;
     packages = with pkgs; [
@@ -200,8 +201,8 @@
       neovim
       asdf-vm
       pinentry-gtk2
+      pinentry-gnome3
       gnupg
-      #unstable.zoom-us
       firefox-devedition
       nodejs
       slack
@@ -210,7 +211,6 @@
       jetbrains-toolbox
       pass
       diff-so-fancy
-      webex
       pkgs.unstable.zed-editor
       pkgs.unstable.package-version-server
       amdgpu_top
@@ -222,7 +222,6 @@
       gcc # for zed
       #ruff # for zed
       goose-cli
-      teams-for-linux
       claude-code
       neofetch
       eww
@@ -245,6 +244,10 @@
       pyright
       just
       yt-dlp
+      socat
+      plover-flake.packages.${pkgs.system}.plover-full
+      pkgs.unstable.zoom-us
+      beads-flake.packages.${pkgs.system}.default
     ];
   };
   systemd.user.services = {
@@ -312,7 +315,6 @@
     xorg.xev
     hsetroot
     redshift
-    flameshot
     pkgs.unstable.code-cursor
     pwvucontrol
     pamixer
@@ -333,6 +335,11 @@
     btrbk
     devenv
     lsof
+    #(pkgs.unstable.flameshot.override { enableWlrSupport = true; })
+    hyprshot
+    hyprpicker
+    flameshot
+    chromium
   ];
 
   services.clipmenu.enable = true;
@@ -427,14 +434,6 @@
   };
   programs.dconf.enable = true;
   security.polkit.enable = true;
-  services.flatpak.enable = true;
-  systemd.services.flatpak-repo = {
-    wantedBy = [ "multi-user.target" ];
-    path = [ pkgs.flatpak ];
-    script = ''
-      flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-    '';
-  };
   systemd.services."user@".serviceConfig.Delegate = "cpu io memory pids cpuset";
 
   services.fprintd.enable = true;

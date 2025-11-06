@@ -8,9 +8,11 @@
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     impermanence.url = "github:nix-community/impermanence";
     talon-nix.url = "github:nix-community/talon-nix";
+    plover-flake.url = "github:openstenoproject/plover-flake";
+    beads-flake.url = "github:steveyegge/beads";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, nixos-hardware, impermanence, talon-nix, ... }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, nixos-hardware, impermanence, talon-nix, plover-flake, beads-flake, ... }:
     let
       system = "x86_64-linux";
       
@@ -27,7 +29,7 @@
         inherit system;
         
         specialArgs = {
-          inherit nixos-hardware impermanence talon-nix;
+          inherit nixos-hardware impermanence talon-nix plover-flake beads-flake;
         };
         
         modules = [
