@@ -46,7 +46,7 @@
   hardware.graphics.enable = true;
   services.xserver.videoDrivers = [ "amdgpu" ];
   services.ollama = {
-    enable = true;
+    enable = false;
     loadModels = [ "gemma3" ];
     acceleration = "rocm";
     rocmOverrideGfx = "11.0.3";
@@ -211,7 +211,7 @@
       pinentry-gtk2
       pinentry-gnome3
       gnupg
-      firefox-devedition
+      pkgs.unstable.firefox-devedition
       nodejs
       slack
       mplayer
@@ -231,6 +231,7 @@
       #ruff # for zed
       goose-cli
       claude-code
+      codex
       neofetch
       eww
       hyprpaper # for hyprland
