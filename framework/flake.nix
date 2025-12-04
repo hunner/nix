@@ -2,7 +2,7 @@
   description = "NixOS configuration for liminal (Framework 16)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     
     nixos-hardware.url = "github:NixOS/nixos-hardware";

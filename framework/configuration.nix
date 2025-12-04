@@ -1,6 +1,9 @@
 # Config for framework16
 { config, pkgs, lib, nixos-hardware, impermanence, talon-nix, plover-flake, beads-flake, ... }:
   {
+  nix.settings = {
+    download-buffer-size = 524288000; # 500 MiB
+  };
   imports =
     [
       nixos-hardware.nixosModules.framework-16-7040-amd
@@ -11,16 +14,18 @@
 
   boot = {
     loader.systemd-boot.enable = true;
-    loader.systemd-boot.configurationLimit = 100;
+    loader.systemd-boot.configurationLimit = 20;
     loader.efi.canTouchEfiVariables = true;
     #initrd.luks.devices."cryptroot".device = "/dev/disk/by-partlabel/disk-nvme0n1-cryptroot";
     initrd.luks.devices."cryptswap".device = "/dev/disk/by-partlabel/disk-nvme0n1-swap";
 
-    resumeDevice = "/dev/nvme0n1p2";
+    resumeDevice = "/dev/mapper/cryptswap";
     kernelParams = [
-      "resume_offset=0"
       "mem_sleep_default=deep"
     ];
+    extraModprobeConfig = ''
+      options amdgpu cwsr_enable=0 # For ROCm to not crash
+    '';
   };
   swapDevices = [ {
     device = "/dev/mapper/cryptswap";
@@ -41,15 +46,14 @@
 
   hardware.amdgpu = {
     opencl.enable = true;
-    amdvlk.enable = true;
   };
   hardware.graphics.enable = true;
   services.xserver.videoDrivers = [ "amdgpu" ];
   services.ollama = {
-    enable = false;
+    enable = true;
     loadModels = [ "gemma3" ];
     acceleration = "rocm";
-    rocmOverrideGfx = "11.0.3";
+    rocmOverrideGfx = "11.0.2";
   };
 
   networking.hostId = "3294c9a2"; # Required for ZFS
@@ -131,10 +135,10 @@
   services.xserver.enable = true;
 
   # Enable the GNOME Desktop Environment.
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.displayManager.gdm.wayland = true;
-  services.xserver.displayManager.gdm.autoSuspend = true;
-  services.xserver.desktopManager.gnome.enable = true;
+  services.displayManager.gdm.enable = true;
+  services.displayManager.gdm.wayland = true;
+  services.displayManager.gdm.autoSuspend = true;
+  services.desktopManager.gnome.enable = true;
 
   services.xserver.windowManager.xmonad = {
     enable = true;
@@ -164,9 +168,9 @@
   hardware.bluetooth.enable = true;
   services.blueman.enable = true;
 
-  services.logind = {
-    extraConfig = "HandlePowerKey=suspend";
-    lidSwitch = "suspend";
+  services.logind.settings.Login = {
+    HandlePowerKey = "suspend";
+    HandleLidSwitch = "suspend";
   };
 
   services.upower = {
@@ -231,7 +235,7 @@
       #ruff # for zed
       goose-cli
       claude-code
-      codex
+      pkgs.unstable.codex
       neofetch
       eww
       hyprpaper # for hyprland
@@ -249,14 +253,14 @@
       gromit-mpx
       urbanterror
       ghostty
-      talon-nix.packages.${pkgs.system}.default
+      talon-nix.packages.${pkgs.stdenv.hostPlatform.system}.default
       pyright
       just
       yt-dlp
       socat
-      plover-flake.packages.${pkgs.system}.plover-full
+      plover-flake.packages.${pkgs.stdenv.hostPlatform.system}.plover-full
       pkgs.unstable.zoom-us
-      beads-flake.packages.${pkgs.system}.default
+      beads-flake.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
   };
   systemd.user.services = {
