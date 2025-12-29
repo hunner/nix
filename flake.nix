@@ -36,7 +36,7 @@
         ];
       };
 
-      nixosConfigurations.cryochamber = nixpkgs-25-05.lib.nixosSystem {
+      nixosConfigurations.cryochamber = nixpkgs-25-11.lib.nixosSystem {
         inherit system;
         specialArgs = {
           inherit impermanence;
