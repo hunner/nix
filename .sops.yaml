@@ -1,0 +1,21 @@
+keys:
+  - &person_hunner age17sdp0gguexd88qel74fa4zeckxh93gqpkayz366fz6yvjauw7vcq7w6y45
+  - &host_zima age16ptwug2yygtfh2dyy5dahaz85pfv3nvqyks03wltyymhyal25uyskz3q9v
+  - &host_cryochamber age122r8wrurhfjwple2ykd4wxafxezjd78mpkrzzyplcdju8q5ykecs3wycee
+  - &host_liminal age1jv3t4pltlsympq86vjhjjr66hvm25hv9utlk2nwa99qxfapc2amq2vmkel
+creation_rules:
+  - path_regex: hosts/zima/secrets/[^/]+\.(yaml|json|env|ini)$
+    key_groups:
+    - age:
+      - *person_hunner
+      - *host_zima
+  - path_regex: hosts/cryochamber/secrets/[^/]+\.(yaml|json|env|ini)$
+    key_groups:
+    - age:
+      - *person_hunner
+      - *host_cryochamber
+  - path_regex: hosts/liminal/secrets/[^/]+\.(yaml|json|env|ini)$
+    key_groups:
+    - age:
+      - *person_hunner
+      - *host_liminal

@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, impermanence, ... }:
 
 #zpool import -f rpool
 #mount -t zfs rpool/local/root /mnt
@@ -9,9 +9,7 @@
 #mount -t zfs rpool/safe/persist /mnt/persist
 #mount -t zfs rpool/local/var/lib /mnt/var/lib
 #mount -t zfs rpool/local/var/log /mnt/var/log
-let
-  impermanence = builtins.fetchTarball "https://github.com/nix-community/impermanence/archive/master.tar.gz";
-in
+
 {
   imports =
     [
@@ -137,11 +135,16 @@ in
     };
   };
 
+  # sops-nix secrets
+  sops.defaultSopsFile = ./secrets/config.yaml;
+  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+  sops.secrets.hashedPassword.neededForUsers = true;
+
   # Define a user account
   users.users.hunner = {
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" "networkmanager" ];
-    hashedPassword = "$y$j9T$hLqdzlz7dbJZgUnKs.eo3/$25s/2X18vGtDKj53qD1sn/.Omp/6CBJWbn7d9KAiOK7";
+    hashedPasswordFile = config.sops.secrets.hashedPassword.path;
     shell = pkgs.zsh;
     packages = with pkgs; [
       fzf

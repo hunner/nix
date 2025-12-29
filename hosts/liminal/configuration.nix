@@ -201,12 +201,17 @@
   services.libinput.enable = true;
   services.touchegg.enable = true;
 
+  # sops-nix secrets
+  sops.defaultSopsFile = ./secrets/config.yaml;
+  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+  sops.secrets.hashedPassword.neededForUsers = true;
+
   # Define a user account. Don't forget to set a password with 'passwd'.
   users.users.hunner = {
     isNormalUser = true;
     description = "Hunter Haugen";
     extraGroups = [ "docker" "networkmanager" "wheel" "audio" "video" "dialout" ];
-    hashedPassword = "$y$j9T$hLqdzlz7dbJZgUnKs.eo3/$25s/2X18vGtDKj53qD1sn/.Omp/6CBJWbn7d9KAiOK7";
+    hashedPasswordFile = config.sops.secrets.hashedPassword.path;
     shell = pkgs.zsh;
     packages = with pkgs; [
       fzf
