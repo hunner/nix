@@ -11,7 +11,7 @@
       "${impermanence}/nixos.nix"
     ];
 
-  boot.kernelPackages = pkgs.linuxKernel.packages.linux_6_7;
+  #boot.kernelPackages = pkgs.linuxKernel.packages.linux_6_7;
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.extraPools = [ "bitrot" ];
   hardware.enableAllFirmware = true;
@@ -132,7 +132,7 @@
   # List services that you want to enable:
   services.avahi = {
     enable = true;
-    nssmdns = true;
+    nssmdns4 = true;
     publish = {
       enable = true;
       addresses = true;

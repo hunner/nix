@@ -25,7 +25,7 @@
       };
     in
     {
-      nixosConfigurations.zima = nixpkgs-23-11.lib.nixosSystem {
+      nixosConfigurations.zima = nixpkgs-25-11.lib.nixosSystem {
         inherit system;
         specialArgs = {
           inherit impermanence;
