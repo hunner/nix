@@ -161,7 +161,7 @@
       yearly = 1;
       autosnap = true;
       autoprune = true;
-      recursive = true;
+      recursive = "zfs";
     };
 
     datasets."bitrot" = {

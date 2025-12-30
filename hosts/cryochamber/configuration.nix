@@ -123,7 +123,7 @@
       yearly = 3;
       autosnap = false;
       autoprune = true;
-      recursive = true;
+      recursive = "zfs";
     };
 
     datasets."tank" = {
