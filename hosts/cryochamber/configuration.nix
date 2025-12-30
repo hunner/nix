@@ -164,52 +164,40 @@
       gnupg
     ];
   };
-  users.users.backup = {
-    isNormalUser = true;
-    description = "Backup replication user";
-    shell = pkgs.bash;
-    packages = with pkgs; [
-      sanoid
-    ];
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtgW+cxPjo70k6dkYPqzP0FR5G9zvbArp/85ZHRrMRL backup@cryochamber"
-    ];
+
+  sops.secrets.syncoidSshKey = {
+    owner = "syncoid";
+    group = "syncoid";
+    mode = "0400";
   };
+
 
   services.syncoid = {
     enable = true;
-    user = "backup";
-    sshKey = "/var/lib/syncoid/.ssh/id_ed25519";
-    commonArgs = [
-      #"--sshoption=StrictHostKeyChecking=off"
-      "--sshoption=UserKnownHostsFile=/var/lib/syncoid/.ssh/known_hosts"
-      "--sshoption=IdentitiesOnly=yes"
-    ];
+    #user = "backup";
+    sshKey = config.sops.secrets.syncoidSshKey.path;
+    #commonArgs = [
+    #  #"--sshoption=StrictHostKeyChecking=off"
+    #  "--sshoption=UserKnownHostsFile=/var/lib/syncoid/.ssh/known_hosts"
+    #  "--sshoption=IdentitiesOnly=yes"
+    #];
     commands."zima-bitrot" = {
-      source = "backup@zima:bitrot";
+      source = "root@zima:bitrot";
       target = "tank/backups/zima/bitrot";
       recursive = true;
+      service.serviceConfig.BindReadOnlyPaths = [
+        config.sops.secrets.syncoidSshKey.path
+      ];
     };
     commands."zima-rpool-safe" = {
-      source = "backup@zima:rpool/safe";
+      source = "root@zima:rpool/safe";
       target = "tank/backups/zima/rpool-safe";
       recursive = true;
+      service.serviceConfig.BindReadOnlyPaths = [
+        config.sops.secrets.syncoidSshKey.path
+      ];
     };
   };
-  #systemd.services.syncoid-zima-rpool-safe.serviceConfig = {
-  #  Environment = [
-  #    "HOME=/var/lib/syncoid"
-  #    "SSH_AUTH_SOCK="
-  #  ];
-  #  ExecStartPre = [
-  #    "+${pkgs.coreutils}/bin/mkdir -p /var/lib/syncoid/.ssh"
-  #    "+${pkgs.coreutils}/bin/cp /home/backup/.ssh/id_ed25519 /var/lib/syncoid/.ssh/"
-  #    "+${pkgs.coreutils}/bin/cp /home/backup/.ssh/known_hosts /var/lib/syncoid/.ssh/"
-  #    "+${pkgs.coreutils}/bin/chown -R backup:syncoid /var/lib/syncoid/.ssh"
-  #    "+${pkgs.coreutils}/bin/chmod 700 /var/lib/syncoid/.ssh"
-  #    "+${pkgs.coreutils}/bin/chmod 600 /var/lib/syncoid/.ssh/id_ed25519"
-  #  ];
-  #};
 
   #systemd.services.syncoid-replication = {
   #  description = "ZFS syncoid replication";
