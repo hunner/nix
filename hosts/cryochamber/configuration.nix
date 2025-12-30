@@ -123,15 +123,16 @@
       yearly = 3;
       autosnap = false;
       autoprune = true;
-      recursive = "zfs";
     };
 
     datasets."tank" = {
       useTemplate = [ "backup" ];
+      recursive = "zfs";
     };
 
     datasets."rpool/safe" = {
       useTemplate = [ "backup" ];
+      recursive = "zfs";
     };
   };
 

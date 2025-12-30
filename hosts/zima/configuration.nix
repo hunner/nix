@@ -161,15 +161,16 @@
       yearly = 1;
       autosnap = true;
       autoprune = true;
-      recursive = "zfs";
     };
 
     datasets."bitrot" = {
       useTemplate = [ "production" ];
+      recursive = "zfs";
     };
 
     datasets."rpool/safe" = {
       useTemplate = [ "production" ];
+      recursive = "zfs";
     };
   };
 
