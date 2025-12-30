@@ -188,6 +188,16 @@
       "--sshoption=UserKnownHostsFile=${config.sops.secrets.zimaKnownHosts.path}"
       "--sshoption=IdentitiesOnly=yes"
     ];
+    localTargetAllow = [
+      "change-key"
+      "compression"
+      "create"
+      "mount"
+      "mountpoint"
+      "receive"
+      "rollback"
+      "delete"
+    ];
     commands."zima-bitrot" = {
       source = "root@zima:bitrot";
       target = "tank/backups/zima/bitrot";
