@@ -170,23 +170,30 @@
     group = "syncoid";
     mode = "0400";
   };
+  sops.secrets.zimaKnownHosts = {
+    owner = "syncoid";
+    group = "syncoid";
+    mode = "0444";
+  };
 
 
   services.syncoid = {
     enable = true;
     #user = "backup";
     sshKey = config.sops.secrets.syncoidSshKey.path;
-    #commonArgs = [
-    #  #"--sshoption=StrictHostKeyChecking=off"
-    #  "--sshoption=UserKnownHostsFile=/var/lib/syncoid/.ssh/known_hosts"
-    #  "--sshoption=IdentitiesOnly=yes"
-    #];
+    commonArgs = [
+      #"--no-sync-snap"
+      #"--sshoption=StrictHostKeyChecking=off"
+      "--sshoption=UserKnownHostsFile=${config.sops.secrets.zimaKnownHosts.path}"
+      "--sshoption=IdentitiesOnly=yes"
+    ];
     commands."zima-bitrot" = {
       source = "root@zima:bitrot";
       target = "tank/backups/zima/bitrot";
       recursive = true;
       service.serviceConfig.BindReadOnlyPaths = [
         config.sops.secrets.syncoidSshKey.path
+        config.sops.secrets.zimaKnownHosts.path
       ];
     };
     commands."zima-rpool-safe" = {
@@ -195,6 +202,7 @@
       recursive = true;
       service.serviceConfig.BindReadOnlyPaths = [
         config.sops.secrets.syncoidSshKey.path
+        config.sops.secrets.zimaKnownHosts.path
       ];
     };
   };
