@@ -181,43 +181,43 @@
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtgW+cxPjo70k6dkYPqzP0FR5G9zvbArp/85ZHRrMRL backup@cryochamber"
     ];
   };
-  services.syncoid = {
-    enable = true;
-    user = "backup";
-    sshKey = "/var/lib/syncoid/.ssh/id_ed25519";
-    commonArgs = [
-      #"--sshoption=StrictHostKeyChecking=off"
-      "--sshoption=UserKnownHostsFile=/var/lib/syncoid/.ssh/known_hosts"
-      "--sshoption=IdentitiesOnly=yes"
-      "--no-sync-snap"
-    ];
-    commands."backup-zima-bitrot" = {
-      source = "bitrot";
-      target = "root@cryochamber:tank/backups/zima/bitrot";
-      recursive = true;
-    };
-    commands."backup-zima-rpool-safe" = {
-      source = "rpool/safe";
-      target = "root@cryochamber:tank/backups/zima/rpool-safe";
-      recursive = true;
-    };
-  };
+  #services.syncoid = {
+  #  enable = true;
+  #  user = "backup";
+  #  sshKey = "/var/lib/syncoid/.ssh/id_ed25519";
+  #  commonArgs = [
+  #    #"--sshoption=StrictHostKeyChecking=off"
+  #    "--sshoption=UserKnownHostsFile=/var/lib/syncoid/.ssh/known_hosts"
+  #    "--sshoption=IdentitiesOnly=yes"
+  #    "--no-sync-snap"
+  #  ];
+  #  commands."backup-zima-bitrot" = {
+  #    source = "bitrot";
+  #    target = "root@cryochamber:tank/backups/zima/bitrot";
+  #    recursive = true;
+  #  };
+  #  commands."backup-zima-rpool-safe" = {
+  #    source = "rpool/safe";
+  #    target = "root@cryochamber:tank/backups/zima/rpool-safe";
+  #    recursive = true;
+  #  };
+  #};
   # This was needed when trying to get the backup user to work instead of using
   # root; probably not needed now
-  systemd.services.syncoid-backup-zima-bitrot.serviceConfig = {
-    Environment = [
-      "HOME=/var/lib/syncoid"
-      "SSH_AUTH_SOCK="
-    ];
-    ExecStartPre = [
-      "+${pkgs.coreutils}/bin/mkdir -p /var/lib/syncoid/.ssh"
-      "+${pkgs.coreutils}/bin/cp /home/backup/.ssh/id_ed25519 /var/lib/syncoid/.ssh/"
-      "+${pkgs.coreutils}/bin/cp /home/backup/.ssh/known_hosts /var/lib/syncoid/.ssh/"
-      "+${pkgs.coreutils}/bin/chown -R backup:syncoid /var/lib/syncoid/.ssh"
-      "+${pkgs.coreutils}/bin/chmod 700 /var/lib/syncoid/.ssh"
-      "+${pkgs.coreutils}/bin/chmod 600 /var/lib/syncoid/.ssh/id_ed25519"
-    ];
-  };
+  #systemd.services.syncoid-backup-zima-bitrot.serviceConfig = {
+  #  Environment = [
+  #    "HOME=/var/lib/syncoid"
+  #    "SSH_AUTH_SOCK="
+  #  ];
+  #  ExecStartPre = [
+  #    "+${pkgs.coreutils}/bin/mkdir -p /var/lib/syncoid/.ssh"
+  #    "+${pkgs.coreutils}/bin/cp /home/backup/.ssh/id_ed25519 /var/lib/syncoid/.ssh/"
+  #    "+${pkgs.coreutils}/bin/cp /home/backup/.ssh/known_hosts /var/lib/syncoid/.ssh/"
+  #    "+${pkgs.coreutils}/bin/chown -R backup:syncoid /var/lib/syncoid/.ssh"
+  #    "+${pkgs.coreutils}/bin/chmod 700 /var/lib/syncoid/.ssh"
+  #    "+${pkgs.coreutils}/bin/chmod 600 /var/lib/syncoid/.ssh/id_ed25519"
+  #  ];
+  #};
 
   services.tailscale.enable = true;
 

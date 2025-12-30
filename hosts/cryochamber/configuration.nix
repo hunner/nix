@@ -176,26 +176,26 @@
     ];
   };
 
-  #services.syncoid = {
-  #  enable = true;
-  #  user = "backup";
-  #  sshKey = "/var/lib/syncoid/.ssh/id_ed25519";
-  #  commonArgs = [
-  #    #"--sshoption=StrictHostKeyChecking=off"
-  #    "--sshoption=UserKnownHostsFile=/var/lib/syncoid/.ssh/known_hosts"
-  #    "--sshoption=IdentitiesOnly=yes"
-  #  ];
-  #  #commands."zima-bitrot" = {
-  #  #  source = "backup@zima:bitrot";
-  #  #  target = "tank/backups/zima/bitrot";
-  #  #  recursive = true;
-  #  #};
-  #  commands."zima-rpool-safe" = {
-  #    source = "backup@zima:rpool/safe";
-  #    target = "tank/backups/zima/rpool-safe";
-  #    recursive = true;
-  #  };
-  #};
+  services.syncoid = {
+    enable = true;
+    user = "backup";
+    sshKey = "/var/lib/syncoid/.ssh/id_ed25519";
+    commonArgs = [
+      #"--sshoption=StrictHostKeyChecking=off"
+      "--sshoption=UserKnownHostsFile=/var/lib/syncoid/.ssh/known_hosts"
+      "--sshoption=IdentitiesOnly=yes"
+    ];
+    commands."zima-bitrot" = {
+      source = "backup@zima:bitrot";
+      target = "tank/backups/zima/bitrot";
+      recursive = true;
+    };
+    commands."zima-rpool-safe" = {
+      source = "backup@zima:rpool/safe";
+      target = "tank/backups/zima/rpool-safe";
+      recursive = true;
+    };
+  };
   #systemd.services.syncoid-zima-rpool-safe.serviceConfig = {
   #  Environment = [
   #    "HOME=/var/lib/syncoid"
