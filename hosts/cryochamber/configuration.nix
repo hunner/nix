@@ -183,20 +183,20 @@
     #user = "backup";
     sshKey = config.sops.secrets.syncoidSshKey.path;
     commonArgs = [
-      #"--no-sync-snap"
+      "--no-sync-snap"
       #"--sshoption=StrictHostKeyChecking=off"
       "--sshoption=UserKnownHostsFile=${config.sops.secrets.zimaKnownHosts.path}"
       "--sshoption=IdentitiesOnly=yes"
     ];
     localTargetAllow = [
-      "change-key"
+      #"change-key" # only for encrypted datasets
       "compression"
       "create"
       "mount"
       "mountpoint"
       "receive"
       "rollback"
-      "delete"
+      #"destroy"
     ];
     commands."zima-bitrot" = {
       source = "root@zima:bitrot";
