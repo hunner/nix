@@ -117,7 +117,7 @@
 
     templates.backup = {
       frequently = 0;
-      hourly = 0;
+      hourly = 12;
       daily = 30;
       monthly = 6;
       yearly = 3;
@@ -125,7 +125,7 @@
       autoprune = true;
     };
 
-    datasets."tank" = {
+    datasets."tank/backup" = {
       useTemplate = [ "backup" ];
       recursive = "zfs";
     };
