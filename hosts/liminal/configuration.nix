@@ -30,6 +30,12 @@
   swapDevices = [ {
     device = "/dev/mapper/cryptswap";
   } ];
+
+  # Allow hibernate image to be larger (50 GiB) to accommodate 56 GiB system RAM
+  # Default is ~2/5 of RAM which is too small when memory is heavily used
+  systemd.tmpfiles.rules = [
+    "w /sys/power/image_size - - - - 53687091200"
+  ];
   services.fwupd.enable = true;
   hardware.framework.enableKmod = true;
 
@@ -51,7 +57,7 @@
   services.xserver.videoDrivers = [ "amdgpu" ];
   services.ollama = {
     enable = true;
-    loadModels = [ "gemma3" ];
+    loadModels = [ "gemma3" "gpt-oss" ];
     acceleration = "rocm";
     rocmOverrideGfx = "11.0.2";
   };
@@ -111,6 +117,7 @@
     enable = true;
     extraOptions = "--storage-driver=overlay2";
   };
+  programs.niri.enable = true;
   programs.hyprland.enable = true;
   programs.hyprland.xwayland.enable = false;
   programs.hyprland.withUWSM = true;
@@ -227,8 +234,9 @@
       ffmpeg
       jetbrains-toolbox
       pass
+      dua
       diff-so-fancy
-      pkgs.unstable.zed-editor
+      zed-editor
       pkgs.unstable.package-version-server
       amdgpu_top
       nixd # for zed
@@ -266,6 +274,8 @@
       plover-flake.packages.${pkgs.stdenv.hostPlatform.system}.plover-full
       pkgs.unstable.zoom-us
       beads-flake.packages.${pkgs.stdenv.hostPlatform.system}.default
+      nix-index # for nix-locate
+      sops
     ];
   };
   systemd.user.services = {
@@ -298,6 +308,16 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
+  # Allow dynamic linked binaries
+  programs.nix-ld.enable = true;
+
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true; # Open ports in the firewall for Steam Remote Play
+    dedicatedServer.openFirewall = true; # Open ports in the firewall for Source Dedicated Server
+    localNetworkGameTransfers.openFirewall = true; # Open ports in the firewall for Steam Local Network Game Transfers
+  };
+
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -314,6 +334,7 @@
     file
     ripgrep
     docker-compose
+    docker-credential-helpers
     powertop
     alacritty
     rofi
@@ -334,6 +355,7 @@
     hsetroot
     redshift
     pkgs.unstable.code-cursor
+    pkgs.unstable.cursor-cli
     pwvucontrol
     pamixer
     helvum
@@ -346,6 +368,7 @@
     restic
     xscreensaver
     unzip
+    zip
     scarlett2
     alsa-scarlett-gui
     pkgs.unstable.ndi-6
@@ -358,6 +381,7 @@
     hyprpicker
     flameshot
     chromium
+    lmstudio
   ];
 
   services.clipmenu.enable = true;
@@ -422,8 +446,8 @@
   # services.openssh.enable = true;
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 ];
-  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 ];
+  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 ];
+  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
   systemd.services.upower.enable = true;
