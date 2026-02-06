@@ -10,8 +10,11 @@
     talon-nix.url = "github:nix-community/talon-nix";
     plover-flake.url = "github:openstenoproject/plover-flake";
     beads-flake.url = "github:steveyegge/beads";
+    awww.url = "git+https://codeberg.org/LGFae/awww";
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+    niri.url = "github:hunner/niri/hunner/focus-to-workspace";
+    niri.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = {
@@ -23,7 +26,9 @@
     talon-nix,
     plover-flake,
     beads-flake,
+    awww,
     sops-nix,
+    niri,
     ...
   }:
     let
@@ -42,7 +47,7 @@
         inherit system;
 
         specialArgs = {
-          inherit nixos-hardware impermanence talon-nix plover-flake beads-flake;
+          inherit nixos-hardware impermanence talon-nix plover-flake beads-flake awww niri;
         };
 
         modules = [

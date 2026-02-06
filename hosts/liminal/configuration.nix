@@ -1,5 +1,16 @@
 # Config for framework16
-{ config, pkgs, lib, nixos-hardware, impermanence, talon-nix, plover-flake, beads-flake, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  nixos-hardware,
+  impermanence,
+  talon-nix,
+  plover-flake,
+  beads-flake,
+  awww,
+  niri,
+  ... }:
   {
   nix.settings = {
     download-buffer-size = 524288000; # 500 MiB
@@ -116,14 +127,19 @@
   virtualisation.docker = {
     enable = true;
     extraOptions = "--storage-driver=overlay2";
+    extraPackages = [
+      pkgs.docker-buildx
+      pkgs.docker-compose
+    ];
   };
   programs.niri.enable = true;
+  programs.niri.package = niri.packages.${pkgs.stdenv.hostPlatform.system}.default;
   programs.hyprland.enable = true;
   programs.hyprland.xwayland.enable = false;
   programs.hyprland.withUWSM = true;
   programs.hyprlock.enable = true;
   services.hypridle.enable = true;
-  programs.waybar.enable = true;
+  programs.waybar.enable = false;
   environment.sessionVariables.NIXOS_OZONE_WL = "1"; # hint electron apps to use wayland
   programs.zsh.enable = true;
   services.openssh.enable = true;
@@ -164,6 +180,7 @@
     extraPortals = [
       pkgs.xdg-desktop-portal-wlr
       pkgs.xdg-desktop-portal-gtk
+      pkgs.xdg-desktop-portal-gnome
       #pkgs.xdg-desktop-portal-hyprland
     ];
   };
@@ -232,6 +249,7 @@
       slack
       mplayer
       ffmpeg
+      docker-credential-helpers
       jetbrains-toolbox
       pass
       dua
@@ -251,6 +269,9 @@
       pkgs.unstable.codex
       neofetch
       eww
+      quickshell
+      fuzzel
+      xwayland-satellite
       hyprpaper # for hyprland
       hyprcursor # for hyprland
       nordzy-icon-theme
@@ -270,10 +291,12 @@
       pyright
       just
       yt-dlp
+      ledger-live-desktop
       socat
       plover-flake.packages.${pkgs.stdenv.hostPlatform.system}.plover-full
       pkgs.unstable.zoom-us
-      beads-flake.packages.${pkgs.stdenv.hostPlatform.system}.default
+      # beads-flake.packages.${pkgs.stdenv.hostPlatform.system}.default
+      awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
       nix-index # for nix-locate
       sops
     ];
@@ -333,8 +356,6 @@
     tmux
     file
     ripgrep
-    docker-compose
-    docker-credential-helpers
     powertop
     alacritty
     rofi
@@ -371,7 +392,7 @@
     zip
     scarlett2
     alsa-scarlett-gui
-    pkgs.unstable.ndi-6
+    #pkgs.unstable.ndi-6
     xdg-utils
     btrbk
     devenv
@@ -408,18 +429,18 @@
     enable = true;
     polkitPolicyOwners = [ "hunner" ];
   };
-  programs.obs-studio = {
-    enable = true;
-    package = pkgs.unstable.obs-studio;
-    enableVirtualCamera = true;
-    plugins = with pkgs.unstable.obs-studio-plugins; [
-      wlrobs
-      obs-backgroundremoval
-      obs-pipewire-audio-capture
-      #obs-ndi
-      distroav
-    ];
-  };
+  #programs.obs-studio = {
+  #  enable = true;
+  #  package = pkgs.unstable.obs-studio;
+  #  enableVirtualCamera = true;
+  #  plugins = with pkgs.unstable.obs-studio-plugins; [
+  #    wlrobs
+  #    obs-backgroundremoval
+  #    obs-pipewire-audio-capture
+  #    #obs-ndi
+  #    distroav
+  #  ];
+  #};
 
   fonts.packages = with pkgs; [
     nerd-fonts.droid-sans-mono
