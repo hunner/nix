@@ -41,6 +41,10 @@
           config.allowUnfree = true;
         };
       };
+
+      overlay-local = final: prev: {
+        codex = prev.callPackage ./pkgs/codex/package.nix { };
+      };
     in
     {
       nixosConfigurations.liminal = nixpkgs.lib.nixosSystem {
@@ -52,7 +56,7 @@
 
         modules = [
           # Add unstable overlay
-          ({ config, pkgs, ... }: { nixpkgs.overlays = [ overlay-unstable ]; })
+          ({ config, pkgs, ... }: { nixpkgs.overlays = [ overlay-unstable overlay-local ]; })
 
           # Add sops
           sops-nix.nixosModules.sops

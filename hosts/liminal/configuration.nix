@@ -266,7 +266,7 @@
       #ruff # for zed
       goose-cli
       claude-code
-      pkgs.unstable.codex
+      codex
       neofetch
       eww
       quickshell
