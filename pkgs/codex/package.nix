@@ -12,24 +12,25 @@
   nix-update-script,
   pkg-config,
   openssl,
+  libcap,
   ripgrep,
   versionCheckHook,
   installShellCompletions ? stdenv.buildPlatform.canExecute stdenv.hostPlatform,
 }:
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "codex";
-  version = "0.98.0";
+  version = "0.101.0";
 
   src = fetchFromGitHub {
     owner = "openai";
     repo = "codex";
     tag = "rust-v${finalAttrs.version}";
-    hash = "sha256-rP5Qo70n5lNrdR6ycE63VObLwcMNRlk8sY/kuJ4Qw9Y=";
+    hash = "sha256-m2Jq7fbSXQ/O3bNBr6zbnQERhk2FZXb+AlGZsHn8GuQ=";
   };
 
   sourceRoot = "${finalAttrs.src.name}/codex-rs";
 
-  cargoHash = "sha256-DTLC+s9OfWXkjK2Ab5RKPxRB5SfWNqDLA38jvcraZvg=";
+  cargoHash = "sha256-oOcQv3NFd45WRdn2QtDMxVZwf3KjGWaSDBCjCk0ik/U=";
 
   nativeBuildInputs = [
     clang
@@ -43,6 +44,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
   buildInputs = [
     libclang
     openssl
+  ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+    libcap
   ];
 
   # NOTE: set LIBCLANG_PATH so bindgen can locate libclang, and adjust
@@ -81,6 +84,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   '';
 
   doInstallCheck = true;
+  versionCheckProgramArg = "--version";
   nativeInstallCheckInputs = [ versionCheckHook ];
 
   passthru = {

@@ -293,7 +293,7 @@
       yt-dlp
       ledger-live-desktop
       socat
-      plover-flake.packages.${pkgs.stdenv.hostPlatform.system}.plover-full
+      #plover-flake.packages.${pkgs.stdenv.hostPlatform.system}.plover-full
       pkgs.unstable.zoom-us
       # beads-flake.packages.${pkgs.stdenv.hostPlatform.system}.default
       awww.packages.${pkgs.stdenv.hostPlatform.system}.awww

@@ -1,9 +1,7 @@
 {
-  description = "NixOS configurations for zima, cryochamber, and liminal";
+  description = "NixOS configurations for zima, cryochamber, liminal, and ruil";
 
   inputs = {
-    nixpkgs-23-11.url = "github:NixOS/nixpkgs/nixos-23.11";
-    nixpkgs-25-05.url = "github:NixOS/nixpkgs/nixos-25.05";
     nixpkgs-25-11.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     sops-nix.url = "github:Mic92/sops-nix";
@@ -12,16 +10,37 @@
     talon-nix.url = "github:nix-community/talon-nix";
     plover-flake.url = "github:openstenoproject/plover-flake";
     beads-flake.url = "github:steveyegge/beads";
+    awww.url = "git+https://codeberg.org/LGFae/awww";
+    niri.url = "github:hunner/niri/hunner/focus-to-workspace";
+    #niri.inputs.nixpkgs.follows = "nixpkgs-25-11";
   };
 
-  outputs = { self, nixpkgs-23-11, nixpkgs-25-05, nixpkgs-25-11, nixpkgs-unstable, sops-nix, nixos-hardware, impermanence, talon-nix, plover-flake, beads-flake, ... }:
+  outputs = {
+    self,
+    nixpkgs-25-11,
+    nixpkgs-unstable,
+    sops-nix,
+    nixos-hardware,
+    impermanence,
+    talon-nix,
+    plover-flake,
+    beads-flake,
+    awww,
+    niri,
+    ...
+  }:
     let
       system = "x86_64-linux";
+
       overlay-unstable = final: prev: {
         unstable = import nixpkgs-unstable {
           inherit system;
           config.allowUnfree = true;
         };
+      };
+
+      overlay-local = final: prev: {
+        codex = prev.callPackage ./pkgs/codex/package.nix { };
       };
     in
     {
@@ -47,14 +66,31 @@
         ];
       };
 
+      nixosConfigurations.ruil = nixpkgs-25-11.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ./hosts/ruil/configuration.nix
+          sops-nix.nixosModules.sops
+        ];
+      };
+
       nixosConfigurations.liminal = nixpkgs-25-11.lib.nixosSystem {
         inherit system;
         specialArgs = {
-          inherit nixos-hardware impermanence talon-nix plover-flake beads-flake;
+          inherit
+            nixos-hardware
+            impermanence
+            talon-nix
+            plover-flake
+            beads-flake
+            awww
+            niri
+            ;
         };
         modules = [
-          ({ ... }: { nixpkgs.overlays = [ overlay-unstable ]; })
+          ({ ... }: { nixpkgs.overlays = [ overlay-unstable overlay-local ]; })
           ./hosts/liminal/configuration.nix
+          sops-nix.nixosModules.sops
         ];
       };
     };
