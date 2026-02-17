@@ -105,6 +105,31 @@
     # Don't lecture after reboot
     Defaults lecture = never
   '';
+  # Add local development CA
+  security.pki.certificates = [
+    ''
+      -----BEGIN CERTIFICATE-----
+      MIIDWjCCAkKgAwIBAgIUGRnCFfA+iZqheSfHGXSccBYVFsUwDQYJKoZIhvcNAQEL
+      BQAwGzEZMBcGA1UEAwwQVmFsaWRNaW5kIERldiBDQTAeFw0yNTA3MTcyMjEyMTJa
+      Fw0zNTA3MTUyMjEyMTJaMBsxGTAXBgNVBAMMEFZhbGlkTWluZCBEZXYgQ0EwggEi
+      MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCdGG304TanKBR3z3u0Snc6+kBN
+      piAK4DXhBTFEsCyxzdmH225LOiv16pgZBMq940KdUslExg9/XMy15ozStP/hpTms
+      eInyV77s6T2k9fe593fDLvTxrbCzjYJm0JJ1dBgrRUZe2FwiYS+qeTSOFnrAe7y9
+      SYLNZ1RJG+bQCJcJr89OvVoCyHkWA2CytgYNupDanuexGQxkBtGZ81s5AtX/dNtL
+      prlsuGoNOUGXZ/sPaL452ZVwu1Ha+41zHTSipo/WzwSCmw8xFaEIY5sySbATz9YD
+      IqbtaZrj1600sHE804jRDnnCfU5AGTC3fhzPodnWLf4LUdrTxh9fEZMedE3/AgMB
+      AAGjgZUwgZIwDAYDVR0TBAUwAwEB/zAdBgNVHQ4EFgQUUcRKwhFGel3xrDZEBofl
+      hk0duQAwVgYDVR0jBE8wTYAUUcRKwhFGel3xrDZEBoflhk0duQChH6QdMBsxGTAX
+      BgNVBAMMEFZhbGlkTWluZCBEZXYgQ0GCFBkZwhXwPomaoXknxxl0nHAWFRbFMAsG
+      A1UdDwQEAwIBBjANBgkqhkiG9w0BAQsFAAOCAQEARD1cMX3e+1/5X3qjDPX3sVNe
+      b/02sWhD0RtAAlaSEAlnM4bYx7JLrq45hEgdwBE6aH3tN+HseC2TnLCfp6TeWi5F
+      C/lvuJE3dbNlxv+Js4ksBhuqlqFWJm8SEVwUCnRX70M08Pxmr3Lz76NCGjV9xMEL
+      LKAmzE4i8Nk53lNJnCEIaH4vOuGymIyFqHgoFLGZ4fW+tdHVUbDKB+8BTtba7xbs
+      zCU+LkT1YdvVZzfa6K6wrTY8HWTqSa9fPMyqYvalQJmKJVTI45RqbwfqXzBl4bfe
+      ndPc43JRBIoQAj3rbtQvLKB9HUTqD5fvohqA/v9MmdkUnwAWfXe4usRXnh4+BA==
+      -----END CERTIFICATE-----
+    ''
+  ];
 
   # Set your time zone.
   time.timeZone = "America/Los_Angeles";
