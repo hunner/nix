@@ -1,4 +1,4 @@
-{ config, lib, pkgs, modulesPath, ... }:
+{ config, pkgs, modulesPath, openclaw-flake, ... }:
 
 {
   imports = [
@@ -19,6 +19,10 @@
   sops.secrets.hashedPassword-hunner.neededForUsers = true;
   sops.secrets.hashedPassword-ruil.neededForUsers = true;
   sops.secrets.hashedPassword-root.neededForUsers = true;
+  sops.secrets.openclaw-env = {
+    owner = "ruil";
+    mode = "0400";
+  };
 
   # SSH key from DO metadata, shared across all users
   users.users.root = {
@@ -41,10 +45,39 @@
   users.users.ruil = {
     uid = 1001;
     isNormalUser = true;
+    linger = true;
     hashedPasswordFile = config.sops.secrets.hashedPassword-ruil.path;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB5+cFZ52qQft4ionKvdHkNM7lmj3x7vSiG/KqGvZ9JP hunter@haugens.org"
     ];
+  };
+
+  home-manager.useGlobalPkgs = true;
+  home-manager.useUserPackages = true;
+  home-manager.users.ruil = { ... }: {
+    imports = [ openclaw-flake.homeManagerModules.openclaw ];
+
+    home.stateVersion = "25.11";
+
+    # Keep credentials in ruil-owned files to avoid root-only bot access.
+    programs.openclaw = {
+      enable = true;
+      config = {
+        gateway.mode = "local";
+        channels.discord.enabled = true;
+        agents.defaults.model.primary = "zai/glm-4.7";
+      };
+    };
+
+    # openclaw onboarding can exceed Node's default old-space limit on 1 GiB hosts.
+    home.sessionVariables.NODE_OPTIONS = "--max-old-space-size=1536";
+
+    # Environment file is provisioned by sops-nix (`sops.secrets.openclaw-env`).
+    systemd.user.services.openclaw-gateway = {
+      Install.WantedBy = [ "default.target" ];
+      Service.Environment = [ "NODE_OPTIONS=--max-old-space-size=1536" ];
+      Service.EnvironmentFile = [ config.sops.secrets.openclaw-env.path ];
+    };
   };
 
   # Packages
@@ -62,6 +95,26 @@
   services.openssh.settings.PermitRootLogin = "prohibit-password";
   services.openssh.settings.PasswordAuthentication = false;
   services.openssh.settings.KbdInteractiveAuthentication = false;
+
+  # Tailscale
+  services.tailscale = {
+    enable = true;
+    useRoutingFeatures = "client";
+    extraUpFlags = [
+      "--accept-dns"
+      "--accept-routes"
+    ];
+  };
+
+  programs.zsh.enable = true;
+
+  # Add swap on small VPS instances to avoid OOM-kill loops.
+  swapDevices = [
+    {
+      device = "/var/lib/swapfile";
+      size = 4096; # MiB
+    }
+  ];
 
   # Firewall
   networking.firewall = {

@@ -282,6 +282,7 @@
       clipse
       plex-desktop
       signal-desktop
+      telegram-desktop
       flyctl
       dtach
       gromit-mpx
@@ -295,7 +296,7 @@
       socat
       #plover-flake.packages.${pkgs.stdenv.hostPlatform.system}.plover-full
       pkgs.unstable.zoom-us
-      # beads-flake.packages.${pkgs.stdenv.hostPlatform.system}.default
+      pkgs.beads
       awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
       nix-index # for nix-locate
       sops
