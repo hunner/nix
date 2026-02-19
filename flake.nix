@@ -57,7 +57,7 @@
                 }
               ).overrideAttrs
                 (old: {
-                  vendorHash = "sha256-s9ELOxDHHk+RyImrPxm9DPos7Wb4AFWaNKsrgU4soow=";
+                  vendorHash = "sha256-cMvxGJBMUszIbWwBNmWe+ws4m3mfyEZgapxVYNYc5c4=";
                   env = (old.env or { }) // {
                     # Upstream pulls an ICU-backed regex dep; keep Nix build pure-Go.
                     CGO_ENABLED = "0";
