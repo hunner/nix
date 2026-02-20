@@ -12,7 +12,7 @@
     talon-nix.url = "github:nix-community/talon-nix";
     openclaw-flake.url = "github:openclaw/nix-openclaw";
     plover-flake.url = "github:openstenoproject/plover-flake";
-    beads-flake.url = "github:steveyegge/beads";
+    beads-flake.url = "github:steveyegge/beads?ref=v0.49.6";
     beads-flake.inputs.nixpkgs.follows = "nixpkgs-25-11";
     awww.url = "git+https://codeberg.org/LGFae/awww";
     niri.url = "github:hunner/niri/hunner/focus-to-workspace";
@@ -57,7 +57,7 @@
                 }
               ).overrideAttrs
                 (old: {
-                  vendorHash = "sha256-cMvxGJBMUszIbWwBNmWe+ws4m3mfyEZgapxVYNYc5c4=";
+                  vendorHash = "sha256-RyOxrW0C+2E+ULhGeF2RbUhaUFt58sux7neHPei5QJI=";
                   env = (old.env or { }) // {
                     # Upstream pulls an ICU-backed regex dep; keep Nix build pure-Go.
                     CGO_ENABLED = "0";
