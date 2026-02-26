@@ -3,6 +3,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ./modules/vaultwarden.nix
     (modulesPath + "/virtualisation/digital-ocean-config.nix")
   ];
 

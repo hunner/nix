@@ -325,6 +325,8 @@
       awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
       nix-index # for nix-locate
       sops
+      bitwarden-desktop
+      bitwarden-cli
     ];
   };
   systemd.user.services = {

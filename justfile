@@ -24,6 +24,10 @@ deploy-ruil:
 deploy-liminal:
   just deploy-sudo liminal
 
+# Shortcut: deploy zima (local)
+deploy-zima:
+  just deploy-sudo zima
+
 # Update flake lock file
 update:
   nix flake update
