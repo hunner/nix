@@ -4,6 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     ./modules/vaultwarden.nix
+    ./modules/etherpad-lite.nix
     (modulesPath + "/virtualisation/digital-ocean-config.nix")
   ];
 
