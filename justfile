@@ -16,17 +16,21 @@ deploy-sudo host:
   sudo nixos-rebuild switch \
     --flake .#{{host}}
 
-# Shortcut: deploy ruil (remote)
+# Shortcut helper: deploy locally when host matches this machine, otherwise deploy remotely.
+deploy-auto host target:
+  if [ "$(hostname -s)" = "{{host}}" ]; then just deploy-sudo {{host}}; else just deploy-remote {{host}} {{target}}; fi
+
+# Shortcut: deploy ruil
 deploy-ruil:
-  just deploy-remote ruil root@ruil.hunnur.com
+  just deploy-auto ruil root@ruil.hunnur.com
 
-# Shortcut: deploy liminal (local)
+# Shortcut: deploy liminal
 deploy-liminal:
-  just deploy-sudo liminal
+  just deploy-auto liminal root@liminal
 
-# Shortcut: deploy zima (local)
+# Shortcut: deploy zima
 deploy-zima:
-  just deploy-sudo zima
+  just deploy-auto zima root@zima
 
 # Update flake lock file
 update:

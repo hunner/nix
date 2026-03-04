@@ -45,6 +45,61 @@
         };
       };
 
+      overlay-etherpad-fixes = final: prev: {
+        unstable = prev.unstable // {
+          etherpad-lite = prev.unstable.etherpad-lite.overrideAttrs (old: {
+            patches =
+              (old.patches or [ ])
+              ++ [
+                ./pkgs/patches/etherpad-plugin-index-keys.patch
+                ./pkgs/patches/etherpad-declarative-plugin-packages.patch
+                ./pkgs/patches/etherpad-plugin-package-bootstrap-path.patch
+              ];
+            postInstall =
+              (old.postInstall or "")
+              + ''
+                # Declaratively include ep_author_hover plugin so Etherpad can load it
+                # without runtime writes to the Nix store.
+                mkdir -p $out/lib/etherpad-lite/src/plugin_packages/ep_author_hover
+                tar -xzf ${
+                  prev.fetchurl {
+                    url = "https://registry.npmjs.org/ep_author_hover/-/ep_author_hover-1.0.12.tgz";
+                    hash = "sha256-6/gJTB2GTep/n2ShrNqjzbIW121PYmyTDo/i8LpxjYA=";
+                  }
+                } \
+                  --strip-components=1 \
+                  -C $out/lib/etherpad-lite/src/plugin_packages/ep_author_hover \
+                  package
+
+                # Declaratively include ep_images_extended plugin so Etherpad can load it
+                # without runtime writes to the Nix store.
+                mkdir -p $out/lib/etherpad-lite/src/plugin_packages/ep_images_extended
+                tar -xzf ${
+                  prev.fetchurl {
+                    url = "https://registry.npmjs.org/ep_images_extended/-/ep_images_extended-1.1.2.tgz";
+                    hash = "sha256-0RPnfQbeqepOPoML2dO7y77yySwQfD04anQdEKwyHNg=";
+                  }
+                } \
+                  --strip-components=1 \
+                  -C $out/lib/etherpad-lite/src/plugin_packages/ep_images_extended \
+                  package
+
+                # ep_images_extended directly requires mime-db at startup.
+                mkdir -p $out/lib/etherpad-lite/src/node_modules/mime-db
+                tar -xzf ${
+                  prev.fetchurl {
+                    url = "https://registry.npmjs.org/mime-db/-/mime-db-1.49.0.tgz";
+                    hash = "sha256-tzFKqRPRjkcLki8Kv8HOvmebNq/5hyaGBR7oye+CqZk=";
+                  }
+                } \
+                  --strip-components=1 \
+                  -C $out/lib/etherpad-lite/src/node_modules/mime-db \
+                  package
+              '';
+          });
+        };
+      };
+
       overlay-local = final: prev: {
         codex = prev.callPackage ./pkgs/codex/package.nix { };
         beads =
@@ -122,7 +177,7 @@
           inherit openclaw-flake;
         };
         modules = [
-          ({ ... }: { nixpkgs.overlays = [ openclaw-flake.overlays.default ]; })
+          ({ ... }: { nixpkgs.overlays = [ overlay-unstable overlay-etherpad-fixes openclaw-flake.overlays.default ]; })
           home-manager.nixosModules.home-manager
           ./hosts/ruil/configuration.nix
           sops-nix.nixosModules.sops

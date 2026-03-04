@@ -1,0 +1,51 @@
+--- a/src/static/js/pluginfw/plugins.ts
++++ b/src/static/js/pluginfw/plugins.ts
+@@ -123,6 +123,8 @@
+   }));
+ };
+ 
++const declarativePluginDir = path.join(settings.root, 'src', 'plugin_packages');
++
+ exports.getPackages = async () => {
+   const {linkInstaller} = require("./installer");
+   const plugins = await linkInstaller.listPlugins();
+@@ -136,6 +138,39 @@
+     newDependencies[plugin.name] = plugin;
+   }
+ 
++  // Also allow declarative plugins pre-bundled into src/plugin_packages by
++  // Nix overlays (without requiring live-plugin-manager runtime state).
++  try {
++    const entries = await fs.readdir(declarativePluginDir, {withFileTypes: true});
++    for (const entry of entries) {
++      if (!entry.isDirectory()) continue;
++
++      const pluginName = entry.name;
++      if (!pluginName.startsWith(exports.prefix) || pluginName === 'ep_etherpad-lite') continue;
++      if (newDependencies[pluginName]) continue;
++
++      const pluginPath = path.join(declarativePluginDir, pluginName);
++      try {
++        const pkg = JSON.parse(await fs.readFile(path.join(pluginPath, 'package.json'), 'utf8'));
++        await fs.access(path.join(pluginPath, 'ep.json'));
++
++        newDependencies[pluginName] = {
++          name: pluginName,
++          version: pkg.version || '0.0.0',
++          path: pluginPath,
++          realPath: pluginPath,
++          location: pluginPath,
++        };
++      } catch (err) {
++        logger.warn(
++            `Skipping declarative plugin ${pluginName}: ${err.message || err.toString()}`,
++        );
++      }
++    }
++  } catch (err) {
++    // plugin_packages directory is optional in upstream installs.
++  }
++
+   newDependencies['ep_etherpad-lite'] = {
+     name: 'ep_etherpad-lite',
+     version: getEpVersion(),

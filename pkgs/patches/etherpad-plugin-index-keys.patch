@@ -1,0 +1,57 @@
+diff --git a/src/static/js/pluginfw/installer.ts b/src/static/js/pluginfw/installer.ts
+index 0fd8949be..22d2d6850 100644
+--- a/src/static/js/pluginfw/installer.ts
++++ b/src/static/js/pluginfw/installer.ts
+@@ -175,9 +175,17 @@ export const getAvailablePlugins = async (maxCacheAge: number | false) => {
+     return availablePlugins;
+   }
+ 
+-  const pluginsLoaded: AxiosResponse<MapArrayType<PackageInfo>> = await axios.get(`${settings.updateServer}/plugins.json`, {headers})
+-  availablePlugins = pluginsLoaded.data;
++  const pluginsLoaded: AxiosResponse<MapArrayType<PackageInfo>> = await axios.get(`${settings.updateServer}/plugins.json`, {headers});
++  const normalizedPlugins: MapArrayType<PackageInfo> = {};
++  for (const key in pluginsLoaded.data) {
++    const plugin = pluginsLoaded.data[key];
++    const normalizedKey = plugin?.name || key;
++    normalizedPlugins[normalizedKey] = plugin;
++  }
++
++  availablePlugins = normalizedPlugins;
+   cacheTimestamp = nowTimestamp;
++
+   return availablePlugins;
+ };
+ 
+@@ -191,22 +199,25 @@ export const search = (searchTerm: string, maxCacheAge: number) => getAvailable
+       }
+ 
+       for (const pluginName in results) {
++        const plugin = results[pluginName];
++        const pluginIdentifier = plugin?.name || pluginName;
++
+         // for every available plugin
+         // TODO: Also search in keywords here!
+-        if (pluginName.indexOf(plugins.prefix) !== 0) continue;
++        if (pluginIdentifier.indexOf(plugins.prefix) !== 0) continue;
+ 
+-        if (searchTerm && !~results[pluginName].name.toLowerCase().indexOf(searchTerm) &&
+-            (typeof results[pluginName].description !== 'undefined' &&
+-                !~results[pluginName].description.toLowerCase().indexOf(searchTerm))
++        if (searchTerm && !~plugin.name.toLowerCase().indexOf(searchTerm) &&
++            (typeof plugin.description !== 'undefined' &&
++                !~plugin.description.toLowerCase().indexOf(searchTerm))
+         ) {
+-          if (typeof results[pluginName].description === 'undefined') {
+-            logger.debug(`plugin without Description: ${results[pluginName].name}`);
++          if (typeof plugin.description === 'undefined') {
++            logger.debug(`plugin without Description: ${plugin.name}`);
+           }
+ 
+           continue;
+         }
+ 
+-        res[pluginName] = results[pluginName];
++        res[pluginIdentifier] = plugin;
+       }
+ 
+       return res;
