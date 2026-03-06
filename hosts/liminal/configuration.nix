@@ -255,11 +255,32 @@
   sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
   sops.secrets.hashedPassword.neededForUsers = true;
 
-  # Define a user account. Don't forget to set a password with 'passwd'.
+  # Define user accounts
+  users.groups.ai = {};
+  users.users.agents = {
+    isSystemUser = true;
+    description = "Account for AI agent sandboxing";
+    group = "ai";
+    home = "/home/agents";
+    createHome = true;
+    homeMode = "0770";
+    extraGroups = [ "docker" "audio" "video" "dialout" ];
+    shell = pkgs.zsh;
+    packages = with pkgs; [
+      nodejs
+      docker-credential-helpers
+      pass
+      pkgs.unstable.claude-code
+      codex
+      just
+      socat
+      pkgs.beads
+    ];
+  };
   users.users.hunner = {
     isNormalUser = true;
     description = "Hunter Haugen";
-    extraGroups = [ "docker" "networkmanager" "wheel" "audio" "video" "dialout" ];
+    extraGroups = [ "docker" "networkmanager" "wheel" "audio" "video" "dialout" "ai" ];
     hashedPasswordFile = config.sops.secrets.hashedPassword.path;
     shell = pkgs.zsh;
     packages = with pkgs; [
