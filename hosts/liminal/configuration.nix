@@ -290,7 +290,7 @@
       gcc # for zed
       #ruff # for zed
       goose-cli
-      claude-code
+      pkgs.unstable.claude-code
       codex
       neofetch
       eww
