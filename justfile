@@ -32,6 +32,9 @@ deploy-liminal:
 deploy-zima:
   just deploy-auto zima root@zima
 
+update-package package version="":
+  if [ -n "{{version}}" ]; then scripts/update-local-package {{package}} --version {{version}}; else scripts/update-local-package {{package}}; fi
+
 # Update flake lock file
 update:
   nix flake update

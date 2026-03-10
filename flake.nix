@@ -102,6 +102,7 @@
 
       overlay-local = final: prev: {
         codex = prev.callPackage ./pkgs/codex/package.nix { };
+        opencode = prev.callPackage ./pkgs/opencode/package.nix { };
         beads =
           let
             bdBase =

@@ -34,7 +34,7 @@
     mode = "0400";
   };
 
-  # HTTPS certificates for `s.hunner.dev` (works with Cloudflare Full strict).
+  # HTTPS certificates for `search.hunner.dev` (works with Cloudflare Full strict).
   security.acme = {
     acceptTerms = true;
     defaults.email = "me@hunner.dev";
@@ -124,15 +124,15 @@
     enable = true;
     configureNginx = true;
     redisCreateLocally = true;
-    domain = "s.hunner.dev";
+    domain = "search.hunner.dev";
     environmentFile = config.sops.secrets.searx-env.path;
     settings.server.secret_key = "$SEARX_SECRET_KEY";
     settings.server.limiter = true;
-    settings.server.base_url = lib.mkForce "https://s.hunner.dev/";
+    settings.server.base_url = lib.mkForce "https://search.hunner.dev/";
     settings.general.open_metrics = "$SEARX_METRICS_PASSWORD";
   };
 
-  services.nginx.virtualHosts."s.hunner.dev" = {
+  services.nginx.virtualHosts."search.hunner.dev" = {
     enableACME = true;
     forceSSL = true;
 
@@ -169,11 +169,11 @@
     };
   };
 
-  # Catch-all vhost so only s.hunner.dev serves SearXNG.
+  # Catch-all vhost so only search.hunner.dev serves SearXNG.
   services.nginx.virtualHosts."_" = {
     default = true;
     addSSL = true;
-    useACMEHost = "s.hunner.dev";
+    useACMEHost = "search.hunner.dev";
     locations."/" = {
       return = "200 \"This page intentionally left blank.\"";
       extraConfig = ''

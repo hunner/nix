@@ -104,6 +104,9 @@
   security.sudo.extraConfig = ''
     # Don't lecture after reboot
     Defaults lecture = never
+
+    # Let hunner run commands as the agents user without a password.
+    hunner ALL=(agents) NOPASSWD: ALL
   '';
   # Add local development CA
   security.pki.certificates = [
@@ -275,6 +278,13 @@
       just
       socat
       pkgs.beads
+      gh
+      pkgs.opencode
+      python3
+      clang
+      clangStdenv
+      cmake
+      just
     ];
   };
   users.users.hunner = {
@@ -284,6 +294,41 @@
     hashedPasswordFile = config.sops.secrets.hashedPassword.path;
     shell = pkgs.zsh;
     packages = with pkgs; [
+      alacritty
+      rofi
+      wofi
+      xss-lock
+      xlockmore
+      dzen2
+      arandr
+      xclip
+      scrot
+      xorg.xrandr
+      xorg.xsetroot
+      xorg.xset
+      xorg.xev
+      hsetroot
+      redshift
+      pkgs.unstable.code-cursor
+      pkgs.unstable.cursor-cli
+      pwvucontrol
+      pamixer
+      helvum
+      #hp15c
+      #nonpareil
+      kitty # for Hyprland
+      kdePackages.dolphin # file browser in hyprland
+      cliphist
+      xscreensaver
+      scarlett2
+      alsa-scarlett-gui
+      #pkgs.unstable.ndi-6
+      #(pkgs.unstable.flameshot.override { enableWlrSupport = true; })
+      hyprshot
+      hyprpicker
+      flameshot
+      chromium
+      lmstudio
       fzf
       neovim
       asdf-vm
@@ -348,6 +393,7 @@
       sops
       bitwarden-desktop
       bitwarden-cli
+      itch
     ];
   };
   systemd.user.services = {
@@ -381,7 +427,13 @@
   nixpkgs.config.allowUnfree = true;
 
   # Allow dynamic linked binaries
-  programs.nix-ld.enable = true;
+  programs.nix-ld = {
+    enable = true;
+    libraries = with pkgs; [
+      stdenv.cc.cc.lib
+    ];
+  };
+
 
   programs.steam = {
     enable = true;
@@ -406,52 +458,18 @@
     file
     ripgrep
     powertop
-    alacritty
-    rofi
-    wofi
-    xss-lock
-    xlockmore
     fortune
-    dzen2
-    arandr
-    xclip
     shellcheck
-    scrot
     fd
-    xorg.xrandr
-    xorg.xsetroot
-    xorg.xset
-    xorg.xev
-    hsetroot
-    redshift
-    pkgs.unstable.code-cursor
-    pkgs.unstable.cursor-cli
-    pwvucontrol
-    pamixer
-    helvum
-    #hp15c
-    #nonpareil
     framework-tool
-    kitty # for Hyprland
-    kdePackages.dolphin # file browser in hyprland
-    cliphist
     restic
-    xscreensaver
     unzip
     zip
-    scarlett2
-    alsa-scarlett-gui
-    #pkgs.unstable.ndi-6
     xdg-utils
     btrbk
     devenv
     lsof
-    #(pkgs.unstable.flameshot.override { enableWlrSupport = true; })
-    hyprshot
-    hyprpicker
-    flameshot
-    chromium
-    lmstudio
+    sg3_utils
   ];
 
   services.clipmenu.enable = true;
@@ -516,8 +534,8 @@
   # services.openssh.enable = true;
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 ];
-  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 ];
+  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 4096 4747 ];
+  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 4096 4747 ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
   systemd.services.upower.enable = true;
