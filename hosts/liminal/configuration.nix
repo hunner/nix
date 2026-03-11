@@ -285,6 +285,7 @@
       clangStdenv
       cmake
       just
+      dtach
     ];
   };
   users.users.hunner = {
@@ -394,6 +395,7 @@
       bitwarden-desktop
       bitwarden-cli
       itch
+      dtach
     ];
   };
   systemd.user.services = {
@@ -534,8 +536,8 @@
   # services.openssh.enable = true;
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 4096 4747 ];
-  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 4096 4747 ];
+  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 4096 ];
+  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 4096 ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
   systemd.services.upower.enable = true;

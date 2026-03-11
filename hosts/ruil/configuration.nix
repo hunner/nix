@@ -5,6 +5,7 @@
     ./hardware-configuration.nix
     ./modules/vaultwarden.nix
     ./modules/etherpad-lite.nix
+    ./modules/forgejo.nix
     (modulesPath + "/virtualisation/digital-ocean-config.nix")
   ];
 
