@@ -280,6 +280,7 @@
       pkgs.beads
       gh
       pkgs.opencode
+      pkgs.pi-coding-agent
       python3
       clang
       clangStdenv
@@ -396,6 +397,7 @@
       bitwarden-cli
       itch
       dtach
+      whois
     ];
   };
   systemd.user.services = {
