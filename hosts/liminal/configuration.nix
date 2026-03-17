@@ -68,9 +68,10 @@
   services.xserver.videoDrivers = [ "amdgpu" ];
   services.ollama = {
     enable = true;
-    loadModels = [ "gemma3" "gpt-oss" ];
-    acceleration = "rocm";
-    rocmOverrideGfx = "11.0.2";
+    loadModels = [ "qwen3" "gpt-oss" ];
+    acceleration = "vulkan";
+    #acceleration = "rocm";
+    #rocmOverrideGfx = "11.0.2";
   };
 
   networking.hostId = "3294c9a2"; # Required for ZFS
