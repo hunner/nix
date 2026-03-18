@@ -66,8 +66,13 @@
   };
   hardware.graphics.enable = true;
   services.xserver.videoDrivers = [ "amdgpu" ];
+  services.nextjs-ollama-llm-ui = {
+    enable = true;
+    port = 4666;
+  };
   services.ollama = {
     enable = true;
+    package = pkgs.unstable.ollama-vulkan;
     loadModels = [ "qwen3" "gpt-oss" ];
     acceleration = "vulkan";
     #acceleration = "rocm";
@@ -358,7 +363,7 @@
       rustup # for zed
       gcc # for zed
       #ruff # for zed
-      goose-cli
+      #goose-cli
       pkgs.unstable.claude-code
       codex
       neofetch
