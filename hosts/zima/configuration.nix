@@ -88,6 +88,7 @@
 
   users.users."root".openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtgW+cxPjo70k6dkYPqzP0FR5G9zvbArp/85ZHRrMRL syncoid@cryochamber"
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
   ];
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -96,6 +97,9 @@
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" ]; # Enable ‘sudo’ for the user.
     hashedPasswordFile = config.sops.secrets.hashedPassword.path;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
+    ];
     packages = with pkgs; [
       tree
     ];

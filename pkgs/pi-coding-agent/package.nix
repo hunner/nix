@@ -5,10 +5,10 @@
 }:
 buildNpmPackage (finalAttrs: {
   pname = "pi-coding-agent";
-  version = "0.58.4";
+  version = "0.62.0";
 
   src = ./.;
-  npmDepsHash = "sha256-NckjndfyChAw0tvp+qMO2henbV00nY1DmckJxGqFHog=";
+  npmDepsHash = "sha256-zflUWPUrg49y9AUlgdXNasXTj5VUHYx09/GFB4Q5nZ4=";
 
   inherit nodejs;
   dontNpmBuild = true;

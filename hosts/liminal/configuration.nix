@@ -73,7 +73,7 @@
   services.ollama = {
     enable = true;
     package = pkgs.unstable.ollama-vulkan;
-    loadModels = [ "qwen3" "gpt-oss" ];
+    loadModels = [ "qwen3.5" "gpt-oss" ];
     acceleration = "vulkan";
     #acceleration = "rocm";
     #rocmOverrideGfx = "11.0.2";
@@ -285,7 +285,7 @@
       socat
       pkgs.beads
       gh
-      pkgs.opencode
+      pkgs.unstable.opencode
       pkgs.pi-coding-agent
       python3
       clang
@@ -300,6 +300,9 @@
     description = "Hunter Haugen";
     extraGroups = [ "docker" "networkmanager" "wheel" "audio" "video" "dialout" "ai" ];
     hashedPasswordFile = config.sops.secrets.hashedPassword.path;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
+    ];
     shell = pkgs.zsh;
     packages = with pkgs; [
       alacritty
@@ -506,18 +509,18 @@
     enable = true;
     polkitPolicyOwners = [ "hunner" ];
   };
-  #programs.obs-studio = {
-  #  enable = true;
-  #  package = pkgs.unstable.obs-studio;
-  #  enableVirtualCamera = true;
-  #  plugins = with pkgs.unstable.obs-studio-plugins; [
-  #    wlrobs
-  #    obs-backgroundremoval
-  #    obs-pipewire-audio-capture
-  #    #obs-ndi
-  #    distroav
-  #  ];
-  #};
+  programs.obs-studio = {
+    enable = true;
+    package = pkgs.unstable.obs-studio;
+    enableVirtualCamera = true;
+    plugins = with pkgs.unstable.obs-studio-plugins; [
+      wlrobs
+      obs-backgroundremoval
+      obs-pipewire-audio-capture
+      #obs-ndi
+      distroav
+    ];
+  };
 
   fonts.packages = with pkgs; [
     nerd-fonts.droid-sans-mono

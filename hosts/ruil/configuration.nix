@@ -15,6 +15,9 @@
 
   # Enable nix flakes
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.optimise.automatic = true;
+  nix.gc.automatic = true;
+  nix.gc.options = "--delete-older-than 30d";
 
   # sops-nix secrets
   sops.defaultSopsFile = ./secrets/config.yaml;
@@ -45,7 +48,7 @@
   users.users.root = {
     hashedPasswordFile = config.sops.secrets.hashedPassword-root.path;
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB5+cFZ52qQft4ionKvdHkNM7lmj3x7vSiG/KqGvZ9JP hunter@haugens.org"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
     ];
   };
 
@@ -55,7 +58,7 @@
     extraGroups = [ "wheel" ];
     hashedPasswordFile = config.sops.secrets.hashedPassword-hunner.path;
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB5+cFZ52qQft4ionKvdHkNM7lmj3x7vSiG/KqGvZ9JP hunter@haugens.org"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
     ];
   };
 
@@ -65,7 +68,7 @@
     linger = true;
     hashedPasswordFile = config.sops.secrets.hashedPassword-ruil.path;
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB5+cFZ52qQft4ionKvdHkNM7lmj3x7vSiG/KqGvZ9JP hunter@haugens.org"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
     ];
   };
 

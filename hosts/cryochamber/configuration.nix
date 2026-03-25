@@ -146,6 +146,9 @@
     isNormalUser = true;
     extraGroups = [ "wheel" "docker" "networkmanager" ];
     hashedPasswordFile = config.sops.secrets.hashedPassword.path;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
+    ];
     shell = pkgs.zsh;
     packages = with pkgs; [
       fzf

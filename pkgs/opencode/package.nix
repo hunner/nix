@@ -13,7 +13,7 @@
 }:
 let
   pname = "opencode";
-  version = "1.2.24";
+  version = "1.2.27";
 
   src = fetchFromGitHub {
     owner = "anomalyco";
