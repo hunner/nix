@@ -26,6 +26,8 @@ in
 
       session.COOKIE_SECURE = true;
       service.DISABLE_REGISTRATION = false;
+      repository.ENABLE_PUSH_CREATE_USER = true;
+      repository.ENABLE_PUSH_CREATE_ORG = true;
     };
   };
 
