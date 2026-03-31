@@ -407,6 +407,7 @@
       itch
       dtach
       whois
+      plus42
     ];
   };
   systemd.user.services = {

@@ -38,7 +38,7 @@
     mode = "0400";
   };
 
-  # HTTPS certificates for `search.hunner.dev` (works with Cloudflare Full strict).
+  # HTTPS certificates for proxied `*.hunner.dev` sites (Cloudflare Full strict).
   security.acme = {
     acceptTerms = true;
     defaults.email = "me@hunner.dev";
@@ -173,11 +173,25 @@
     };
   };
 
-  # Catch-all vhost so only search.hunner.dev serves SearXNG.
+  # Apex site with its own cert so Cloudflare Full (strict) sees a matching
+  # origin certificate for `hunner.dev` instead of falling through to another
+  # subdomain's cert.
+  services.nginx.virtualHosts."hunner.dev" = {
+    enableACME = true;
+    forceSSL = true;
+    locations."/" = {
+      return = "200 \"This page intentionally left blank.\"";
+      extraConfig = ''
+        default_type text/plain;
+      '';
+    };
+  };
+
+  # Catch-all vhost so only explicitly configured names serve applications.
   services.nginx.virtualHosts."_" = {
     default = true;
     addSSL = true;
-    useACMEHost = "search.hunner.dev";
+    useACMEHost = "hunner.dev";
     locations."/" = {
       return = "200 \"This page intentionally left blank.\"";
       extraConfig = ''
