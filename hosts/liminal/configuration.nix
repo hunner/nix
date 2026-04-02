@@ -293,6 +293,7 @@
       cmake
       just
       dtach
+      sox # claude voice
     ];
   };
   users.users.hunner = {
@@ -408,6 +409,7 @@
       dtach
       whois
       plus42
+      sox # claude voice
     ];
   };
   systemd.user.services = {

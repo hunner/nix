@@ -102,6 +102,7 @@
 
       overlay-local = final: prev: {
         codex = prev.callPackage ./pkgs/codex/package.nix { };
+        flow = prev.callPackage ./pkgs/flow/package.nix { };
         opencode = prev.callPackage ./pkgs/opencode/package.nix { };
         pi-coding-agent = prev.callPackage ./pkgs/pi-coding-agent/package.nix { };
         beads =
@@ -179,7 +180,7 @@
           inherit openclaw-flake;
         };
         modules = [
-          ({ ... }: { nixpkgs.overlays = [ overlay-unstable overlay-etherpad-fixes openclaw-flake.overlays.default ]; })
+          ({ ... }: { nixpkgs.overlays = [ overlay-unstable overlay-etherpad-fixes overlay-local openclaw-flake.overlays.default ]; })
           home-manager.nixosModules.home-manager
           ./hosts/ruil/configuration.nix
           sops-nix.nixosModules.sops
