@@ -101,6 +101,7 @@
       };
 
       overlay-local = final: prev: {
+        lean-ctx = prev.callPackage ./pkgs/lean-ctx/package.nix { };
         codex = prev.callPackage ./pkgs/codex/package.nix { };
         flow = prev.callPackage ./pkgs/flow/package.nix { };
         opencode = prev.callPackage ./pkgs/opencode/package.nix { };

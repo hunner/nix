@@ -78,6 +78,33 @@
     #acceleration = "rocm";
     #rocmOverrideGfx = "11.0.2";
   };
+  services.llama-swap = {
+    enable = false;
+    port = 11434;
+    settings = let
+      llamaServer = lib.getExe' pkgs.unstable.llama-cpp-vulkan "llama-server";
+    in {
+      hooks.on_startup.preload = [ "qwen3.5:4b" ];
+      models."qwen3.5:4b" = {
+        cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen_Qwen3.5-4B-Q5_K_L.gguf -c 65536";
+        aliases = [ "qwen" ];
+      };
+      models."qwen3.5:35b" = {
+        cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen_Qwen3.5-35B-A3B-Q5_K_L.gguf -c 65536 --mmap --gpu-layers 35";
+        aliases = [ "qwen3.5" ];
+      };
+    };
+  };
+  systemd.services.llama-swap = {
+    environment = {
+      HOME = "/var/lib/llama-swap";
+      XDG_CACHE_HOME = "/var/cache/llama-swap";
+    };
+    serviceConfig = {
+      StateDirectory = "llama-swap";
+      CacheDirectory = "llama-swap";
+    };
+  };
 
   networking.hostId = "3294c9a2"; # Required for ZFS
   networking.hostName = "liminal";
@@ -294,6 +321,7 @@
       just
       dtach
       sox # claude voice
+      #lean-ctx
     ];
   };
   users.users.hunner = {
@@ -410,6 +438,10 @@
       whois
       plus42
       sox # claude voice
+      pkgs.pi-coding-agent
+      xrandr-invert-colors
+      xcalib
+      #lean-ctx
     ];
   };
   systemd.user.services = {
