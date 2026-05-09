@@ -7,7 +7,7 @@
   impermanence,
   talon-nix,
   plover-flake,
-  beads-flake,
+  #beads-flake,
   awww,
   niri,
   ... }:
@@ -217,6 +217,12 @@
 
   # Enable the X11 windowing system.
   services.xserver.enable = true;
+  services.xserver.displayManager.sessionCommands = ''
+    (
+      sleep 2
+      ${pkgs.xorg.xrandr}/bin/xrandr --output eDP --mode 2560x1600 --rate 120 --primary --auto || true
+    ) &
+  '';
 
   # Enable the GNOME Desktop Environment.
   services.displayManager.gdm.enable = true;
@@ -288,7 +294,7 @@
 
   # sops-nix secrets
   sops.defaultSopsFile = ./secrets/config.yaml;
-  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+  sops.age.sshKeyPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
   sops.secrets.hashedPassword.neededForUsers = true;
 
   # Define user accounts
@@ -307,10 +313,10 @@
       docker-credential-helpers
       pass
       pkgs.unstable.claude-code
-      codex
+      pkgs.unstable.codex
       just
       socat
-      pkgs.beads
+      #pkgs.beads
       gh
       pkgs.unstable.opencode
       pkgs.pi-coding-agent
@@ -379,7 +385,7 @@
       nodejs
       slack
       mplayer
-      ffmpeg
+      ffmpeg-full
       docker-credential-helpers
       jetbrains-toolbox
       pass
@@ -397,7 +403,7 @@
       #ruff # for zed
       #goose-cli
       pkgs.unstable.claude-code
-      codex
+      pkgs.unstable.codex
       neofetch
       eww
       quickshell
@@ -427,7 +433,7 @@
       socat
       #plover-flake.packages.${pkgs.stdenv.hostPlatform.system}.plover-full
       pkgs.unstable.zoom-us
-      pkgs.beads
+      #pkgs.beads
       awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
       nix-index # for nix-locate
       sops
@@ -518,8 +524,11 @@
     devenv
     lsof
     sg3_utils
+    libimobiledevice
+    ifuse
   ];
 
+  services.usbmuxd.enable = true;
   services.clipmenu.enable = true;
   services.picom = {
     enable = true;

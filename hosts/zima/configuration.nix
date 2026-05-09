@@ -83,7 +83,7 @@
 
   # sops-nix secrets
   sops.defaultSopsFile = ./secrets/config.yaml;
-  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+  sops.age.sshKeyPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
   sops.secrets.hashedPassword.neededForUsers = true;
 
   users.users."root".openssh.authorizedKeys.keys = [

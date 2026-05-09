@@ -32,6 +32,10 @@ deploy-liminal:
 deploy-zima:
   just deploy-auto zima root@zima
 
+# Shortcut: deploy cryochamber
+deploy-cryochamber:
+  just deploy-auto cryochamber root@cryochamber
+
 update-package package version="":
   if [ -n "{{version}}" ]; then scripts/update-local-package {{package}} --version {{version}}; else scripts/update-local-package {{package}}; fi
 

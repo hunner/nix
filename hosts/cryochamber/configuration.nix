@@ -138,8 +138,16 @@
 
   # sops-nix secrets
   sops.defaultSopsFile = ./secrets/config.yaml;
-  sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+  sops.age.sshKeyPaths = [ "/persist/etc/ssh/ssh_host_ed25519_key" ];
   sops.secrets.hashedPassword.neededForUsers = true;
+  sops.secrets.hashedPassword-root.neededForUsers = true;
+
+  users.users.root = {
+    hashedPasswordFile = config.sops.secrets.hashedPassword-root.path;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
+    ];
+  };
 
   # Define a user account
   users.users.hunner = {
@@ -166,6 +174,8 @@
       unzip
       lsof
       gnupg
+      znc
+      zncModules.palaver
     ];
   };
 

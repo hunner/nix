@@ -21,6 +21,7 @@ in
     [
       ./hardware-configuration.nix
       "${impermanence}/nixos.nix"
+      #./lemonade.nix
     ];
 
   boot.loader.grub.enable = true;
