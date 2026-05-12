@@ -1,4 +1,10 @@
-{ config, lib, pkgs, modulesPath, openclaw-flake, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  modulesPath,
+  ...
+}:
 
 {
   imports = [
@@ -16,9 +22,13 @@
 
   # Enable nix flakes
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  # Keep a little headroom so remote deploys can still complete GC/DB updates.
+  nix.settings.min-free = 1024 * 1024 * 1024;
+  nix.settings.max-free = 2 * 1024 * 1024 * 1024;
   nix.optimise.automatic = true;
   nix.gc.automatic = true;
-  nix.gc.options = "--delete-older-than 30d";
+  nix.gc.dates = "daily";
+  nix.gc.options = "--delete-older-than 7d";
 
   # sops-nix secrets
   sops.defaultSopsFile = ./secrets/config.yaml;
@@ -34,10 +44,10 @@
     owner = "nginx";
     mode = "0400";
   };
-  sops.secrets.openclaw-env = {
-    owner = "ruil";
-    mode = "0400";
-  };
+  #sops.secrets.openclaw-env = {
+  #  owner = "ruil";
+  #  mode = "0400";
+  #};
 
   # HTTPS certificates for proxied `*.hunner.dev` sites (Cloudflare Full strict).
   security.acme = {
@@ -66,36 +76,10 @@
   users.users.ruil = {
     uid = 1001;
     isNormalUser = true;
-    linger = true;
     hashedPasswordFile = config.sops.secrets.hashedPassword-ruil.path;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
     ];
-  };
-
-  home-manager.useGlobalPkgs = true;
-  home-manager.useUserPackages = true;
-  home-manager.users.ruil = { lib, ... }: {
-    imports = [ openclaw-flake.homeManagerModules.openclaw ];
-
-    home.stateVersion = "25.11";
-
-    # Keep credentials in ruil-owned files to avoid root-only bot access.
-    programs.openclaw.enable = true;
-
-    # Keep ~/.openclaw/openclaw.json user-managed (Home Manager should not touch it).
-    home.file.".openclaw/openclaw.json".enable = lib.mkForce false;
-    home.activation.openclawConfigFiles = lib.mkForce (lib.hm.dag.entryAfter [ "openclawDirs" ] "");
-
-    # openclaw onboarding can exceed Node's default old-space limit on 1 GiB hosts.
-    home.sessionVariables.NODE_OPTIONS = "--max-old-space-size=1536";
-
-    # Environment file is provisioned by sops-nix (`sops.secrets.openclaw-env`).
-    systemd.user.services.openclaw-gateway = {
-      Install.WantedBy = [ "default.target" ];
-      Service.Environment = [ "NODE_OPTIONS=--max-old-space-size=1536" ];
-      Service.EnvironmentFile = [ config.sops.secrets.openclaw-env.path ];
-    };
   };
 
   # Packages
@@ -113,6 +97,11 @@
   services.openssh.settings.PermitRootLogin = "prohibit-password";
   services.openssh.settings.PasswordAuthentication = false;
   services.openssh.settings.KbdInteractiveAuthentication = false;
+
+  services.journald.extraConfig = ''
+    SystemMaxUse=200M
+    RuntimeMaxUse=100M
+  '';
 
   # Tailscale
   services.tailscale = {
@@ -203,11 +192,13 @@
 
   programs.zsh.enable = true;
 
+  boot.loader.grub.configurationLimit = 5;
+
   # Add swap on small VPS instances to avoid OOM-kill loops.
   swapDevices = [
     {
       device = "/var/lib/swapfile";
-      size = 4096; # MiB
+      size = 2048; # MiB
     }
   ];
 

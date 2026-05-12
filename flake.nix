@@ -177,12 +177,8 @@
 
       nixosConfigurations.ruil = nixpkgs-25-11.lib.nixosSystem {
         inherit system;
-        specialArgs = {
-          inherit openclaw-flake;
-        };
         modules = [
-          ({ ... }: { nixpkgs.overlays = [ overlay-unstable overlay-etherpad-fixes overlay-local openclaw-flake.overlays.default ]; })
-          home-manager.nixosModules.home-manager
+          ({ ... }: { nixpkgs.overlays = [ overlay-unstable overlay-etherpad-fixes overlay-local ]; })
           ./hosts/ruil/configuration.nix
           sops-nix.nixosModules.sops
         ];
