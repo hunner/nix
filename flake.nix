@@ -3,9 +3,10 @@
 
   inputs = {
     nixpkgs-25-11.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs-26-05.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
-    home-manager.url = "github:nix-community/home-manager/release-25.11";
-    home-manager.inputs.nixpkgs.follows = "nixpkgs-25-11";
+    home-manager.url = "github:nix-community/home-manager/release-26.05";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs-26-05";
     sops-nix.url = "github:Mic92/sops-nix";
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     impermanence.url = "github:nix-community/impermanence";
@@ -22,6 +23,7 @@
   outputs = {
     self,
     nixpkgs-25-11,
+    nixpkgs-26-05,
     nixpkgs-unstable,
     home-manager,
     sops-nix,
@@ -106,6 +108,7 @@
         flow = prev.callPackage ./pkgs/flow/package.nix { };
         opencode = prev.callPackage ./pkgs/opencode/package.nix { };
         pi-coding-agent = prev.callPackage ./pkgs/pi-coding-agent/package.nix { };
+        xai-grok = prev.callPackage ./pkgs/xai-grok/package.nix { };
         #beads =
         #  let
         #    bdBase =
@@ -184,7 +187,7 @@
         ];
       };
 
-      nixosConfigurations.liminal = nixpkgs-25-11.lib.nixosSystem {
+      nixosConfigurations.liminal = nixpkgs-26-05.lib.nixosSystem {
         inherit system;
         specialArgs = {
           inherit

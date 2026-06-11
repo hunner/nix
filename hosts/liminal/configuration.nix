@@ -74,7 +74,7 @@
     enable = true;
     package = pkgs.unstable.ollama-vulkan;
     loadModels = [ "qwen3.5" "gpt-oss" ];
-    acceleration = "vulkan";
+    #acceleration = "vulkan";
     #acceleration = "rocm";
     #rocmOverrideGfx = "11.0.2";
   };
@@ -114,6 +114,7 @@
     ''
       127.0.0.1 keycloak
       127.0.0.1 k3d-cmvm
+      172.17.0.1 docker.host.internal
     '';
 
   environment.persistence."/persist" = {
@@ -220,13 +221,13 @@
   services.xserver.displayManager.sessionCommands = ''
     (
       sleep 2
-      ${pkgs.xorg.xrandr}/bin/xrandr --output eDP --mode 2560x1600 --rate 120 --primary --auto || true
+      ${pkgs.xrandr}/bin/xrandr --output eDP --mode 2560x1600 --rate 120 --primary --auto || true
     ) &
   '';
 
   # Enable the GNOME Desktop Environment.
   services.displayManager.gdm.enable = true;
-  services.displayManager.gdm.wayland = true;
+  #services.displayManager.gdm.wayland = true;
   services.displayManager.gdm.autoSuspend = true;
   services.desktopManager.gnome.enable = true;
 
@@ -250,6 +251,15 @@
       pkgs.xdg-desktop-portal-gnome
       #pkgs.xdg-desktop-portal-hyprland
     ];
+
+    config = {
+      hyprland = {
+        default = [ "hyprland" "gtk" ];
+        "org.freedesktop.impl.portal.ScreenCast" = [ "hyprland" ];
+        "org.freedesktop.impl.portal.Screenshot" = [ "wlr" ];
+        "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+      };
+    };
   };
 
   # Enable CUPS to print documents.
@@ -306,10 +316,10 @@
     home = "/home/agents";
     createHome = true;
     homeMode = "0770";
-    extraGroups = [ "docker" "audio" "video" "dialout" ];
+    extraGroups = [ "docker" "audio" "video" "dialout" "input" ];
     shell = pkgs.zsh;
     packages = with pkgs; [
-      nodejs
+      nodejs_24
       docker-credential-helpers
       pass
       pkgs.unstable.claude-code
@@ -320,6 +330,7 @@
       gh
       pkgs.unstable.opencode
       pkgs.pi-coding-agent
+      pkgs.xai-grok
       python3
       clang
       clangStdenv
@@ -349,17 +360,17 @@
       arandr
       xclip
       scrot
-      xorg.xrandr
-      xorg.xsetroot
-      xorg.xset
-      xorg.xev
+      xrandr
+      xsetroot
+      xset
+      xev
       hsetroot
       redshift
       pkgs.unstable.code-cursor
       pkgs.unstable.cursor-cli
       pwvucontrol
       pamixer
-      helvum
+      #helvum
       #hp15c
       #nonpareil
       kitty # for Hyprland
@@ -370,6 +381,8 @@
       alsa-scarlett-gui
       #pkgs.unstable.ndi-6
       #(pkgs.unstable.flameshot.override { enableWlrSupport = true; })
+      grim
+      slurp
       hyprshot
       hyprpicker
       flameshot
@@ -382,7 +395,7 @@
       pinentry-gnome3
       gnupg
       pkgs.unstable.firefox-devedition
-      nodejs
+      nodejs_24
       slack
       mplayer
       ffmpeg-full
@@ -404,7 +417,7 @@
       #goose-cli
       pkgs.unstable.claude-code
       pkgs.unstable.codex
-      neofetch
+      #neofetch
       eww
       quickshell
       fuzzel
@@ -437,17 +450,19 @@
       awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
       nix-index # for nix-locate
       sops
-      bitwarden-desktop
-      bitwarden-cli
+      #bitwarden-desktop
+      #bitwarden-cli
       itch
       dtach
       whois
       plus42
       sox # claude voice
       pkgs.pi-coding-agent
+      pkgs.xai-grok
       xrandr-invert-colors
       xcalib
       #lean-ctx
+      kanata
     ];
   };
   systemd.user.services = {
@@ -455,12 +470,15 @@
       description = "PolKit Authentication Agent";
       wantedBy = [ "graphical-session.target" ];
       wants = [ "graphical-session.target" ];
+      partOf = [ "graphical-session.target" ];
       after = [ "graphical-session.target" ];
+      unitConfig.StartLimitIntervalSec = 0;
       serviceConfig = {
         Type = "simple";
         ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+        Environment = "GDK_BACKEND=wayland,x11";
         Restart = "on-failure";
-        RestartSec = 1;
+        RestartSec = 5;
         TimeoutStopSec = 10;
       };
     };
@@ -504,7 +522,7 @@
     bat
     git
     vim
-    emacs
+    emacs-pgtk
     wget
     curl
     htop
@@ -551,7 +569,7 @@
   };
   programs._1password-gui = {
     enable = true;
-    polkitPolicyOwners = [ "hunner" ];
+    polkitPolicyOwners = [ "hunner" "agents" ];
   };
   programs.obs-studio = {
     enable = true;
