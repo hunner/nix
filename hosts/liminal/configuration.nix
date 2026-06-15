@@ -270,15 +270,19 @@
   services.blueman.enable = true;
 
   services.logind.settings.Login = {
-    HandlePowerKey = "suspend";
-    HandleLidSwitch = "suspend";
+    HandlePowerKey = "suspend-then-hibernate";
+    HandleLidSwitch = "suspend-then-hibernate";
+  };
+
+  systemd.sleep.settings.Sleep = {
+    HibernateDelaySec = "30min";
   };
 
   services.upower = {
     enable = true;
-    percentageLow = 15;
-    percentageCritical = 5;
-    percentageAction = 3;
+    percentageLow = 20;
+    percentageCritical = 10;
+    percentageAction = 8;
     criticalPowerAction = "Hibernate";
   };
 
@@ -328,6 +332,7 @@
       socat
       #pkgs.beads
       gh
+      pkgs.unstable.cursor-cli
       pkgs.unstable.opencode
       pkgs.pi-coding-agent
       pkgs.xai-grok

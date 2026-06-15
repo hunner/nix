@@ -7,11 +7,11 @@
 
 stdenvNoCC.mkDerivation rec {
   pname = "xai-grok";
-  version = "0.2.38";
+  version = "0.2.50";
 
   src = fetchurl {
     url = "https://registry.npmjs.org/@xai-official/grok-linux-x64/-/grok-linux-x64-${version}.tgz";
-    hash = "sha256-E023XTq3PwPH2zBuOh4jFoUh08o6p4IPfX0x7KFUleE=";
+    hash = "sha256-LCw+7p7WA71FxhCPquwp7NHujVvZoMXH60IyrBD8FZs=";
   };
 
   nativeBuildInputs = [ nodejs ];
