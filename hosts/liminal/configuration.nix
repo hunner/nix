@@ -199,6 +199,17 @@
   programs.hyprland.enable = true;
   programs.hyprland.xwayland.enable = false;
   programs.hyprland.withUWSM = true;
+  # 1Password system unlock uses polkit/PAM; keyring holds auxiliary secrets.
+  services.gnome.gnome-keyring.enable = true;
+  systemd.user.services.gnome-keyring = {
+    description = "GNOME Keyring daemon";
+    wantedBy = [ "default.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --start --foreground --components=pkcs11,secrets,ssh";
+      Restart = "on-failure";
+    };
+  };
   programs.hyprlock.enable = true;
   services.hypridle.enable = true;
   programs.waybar.enable = false;
@@ -258,6 +269,7 @@
         "org.freedesktop.impl.portal.ScreenCast" = [ "hyprland" ];
         "org.freedesktop.impl.portal.Screenshot" = [ "wlr" ];
         "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
+        "org.freedesktop.impl.portal.Secret" = [ "gnome-keyring" ];
       };
     };
   };
@@ -470,22 +482,38 @@
       kanata
     ];
   };
-  systemd.user.services = {
-    polkit-agent = {
-      description = "PolKit Authentication Agent";
-      wantedBy = [ "graphical-session.target" ];
-      wants = [ "graphical-session.target" ];
-      partOf = [ "graphical-session.target" ];
-      after = [ "graphical-session.target" ];
-      unitConfig.StartLimitIntervalSec = 0;
-      serviceConfig = {
-        Type = "simple";
-        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
-        Environment = "GDK_BACKEND=wayland,x11";
-        Restart = "on-failure";
-        RestartSec = 5;
-        TimeoutStopSec = 10;
-      };
+  # Soteria has a working auth UI on Hyprland. Plain start-hyprland never
+  # activates graphical-session.target and doesn't import XDG_SESSION_ID into
+  # systemd --user, so wrap the agent and start it when Wayland is up.
+  security.soteria.enable = true;
+  systemd.user.services.polkit-soteria = {
+    wantedBy = lib.mkForce [ ];
+    wants = lib.mkForce [ ];
+    after = lib.mkForce [ ];
+    unitConfig.StartLimitIntervalSec = 0;
+    serviceConfig = {
+      ExecStart = lib.mkForce (
+        pkgs.writeShellScript "polkit-soteria-wrapper" ''
+          if [ -z "''${XDG_SESSION_ID:-}" ]; then
+            XDG_SESSION_ID=$(${pkgs.systemd}/bin/loginctl list-sessions --no-legend \
+              | ${pkgs.gawk}/bin/awk -v uid=$(id -u) '$2 == uid && $6 == "user" { print $1; exit }')
+            export XDG_SESSION_ID
+          fi
+          exec ${lib.getExe pkgs.soteria}
+        ''
+      );
+      Restart = lib.mkForce "on-failure";
+      RestartSec = lib.mkForce 5;
+      TimeoutStopSec = 10;
+    };
+  };
+  systemd.user.paths.polkit-soteria-wayland = {
+    description = "Start soteria polkit agent when Wayland is available";
+    wantedBy = [ "default.target" ];
+    pathConfig = {
+      PathExistsGlob = "/run/user/%U/wayland-*";
+      Unit = "polkit-soteria.service";
+      MakeDirectory = false;
     };
   };
 
@@ -647,6 +675,18 @@
   systemd.services."user@".serviceConfig.Delegate = "cpu io memory pids cpuset";
 
   services.fprintd.enable = true;
+  # Password before fingerprint: correct password unlocks without FP;
+  # empty Enter still falls through to fprintd.
+  security.pam.services.polkit-1.fprintAuth = true;
+  security.pam.services.hyprlock.rules.auth.fprintd.order =
+    config.security.pam.services.hyprlock.rules.auth.unix.order + 1;
+  security.pam.services.hyprlock.rules.auth.unix.settings.nullok = lib.mkForce true;
+  security.pam.services.polkit-1.rules.auth.fprintd.order =
+    config.security.pam.services.polkit-1.rules.auth.unix.order + 1;
+  security.pam.services.polkit-1.rules.auth.unix.settings.nullok = lib.mkForce true;
+  security.pam.services.xlock.rules.auth.fprintd.order =
+    config.security.pam.services.xlock.rules.auth.unix.order + 1;
+  security.pam.services.xlock.rules.auth.unix.settings.nullok = lib.mkForce true;
   #security.pam.services = {
   #  login.fprintAuth = true;
   #  xscreensaver.fprintAuth = true;
