@@ -266,7 +266,7 @@
     config = {
       hyprland = {
         default = [ "hyprland" "gtk" ];
-        "org.freedesktop.impl.portal.ScreenCast" = [ "hyprland" ];
+        "org.freedesktop.impl.portal.ScreenCast" = [ "wlr" ];
         "org.freedesktop.impl.portal.Screenshot" = [ "wlr" ];
         "org.freedesktop.impl.portal.FileChooser" = [ "gtk" ];
         "org.freedesktop.impl.portal.Secret" = [ "gnome-keyring" ];
@@ -444,6 +444,7 @@
       nordzy-icon-theme
       nordzy-cursor-theme
       wl-clipboard
+      wl-mirror
       onlyoffice-desktopeditors
       calibre
       clipse
@@ -474,7 +475,7 @@
       whois
       plus42
       sox # claude voice
-      pkgs.pi-coding-agent
+      pkgs.unstable.pi-coding-agent
       pkgs.xai-grok
       xrandr-invert-colors
       xcalib
@@ -482,16 +483,17 @@
       kanata
     ];
   };
-  # Soteria has a working auth UI on Hyprland. Plain start-hyprland never
-  # activates graphical-session.target and doesn't import XDG_SESSION_ID into
-  # systemd --user, so wrap the agent and start it when Wayland is up.
+  # With Hyprland under UWSM, tie the polkit agent to the graphical session
+  # instead of path-triggering it from the Wayland socket. Keep the XDG
+  # session-id wrapper because systemd --user still doesn't export it here,
+  # and kill any stale soteria process by full command path before starting.
   security.soteria.enable = true;
   systemd.user.services.polkit-soteria = {
-    wantedBy = lib.mkForce [ ];
-    wants = lib.mkForce [ ];
-    after = lib.mkForce [ ];
-    unitConfig.StartLimitIntervalSec = 0;
+    wantedBy = lib.mkForce [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    after = lib.mkForce [ "graphical-session.target" ];
     serviceConfig = {
+      ExecStartPre = "-${pkgs.procps}/bin/pkill -f ${lib.getExe pkgs.soteria}";
       ExecStart = lib.mkForce (
         pkgs.writeShellScript "polkit-soteria-wrapper" ''
           if [ -z "''${XDG_SESSION_ID:-}" ]; then
@@ -502,18 +504,8 @@
           exec ${lib.getExe pkgs.soteria}
         ''
       );
-      Restart = lib.mkForce "on-failure";
-      RestartSec = lib.mkForce 5;
+      Restart = lib.mkForce "no";
       TimeoutStopSec = 10;
-    };
-  };
-  systemd.user.paths.polkit-soteria-wayland = {
-    description = "Start soteria polkit agent when Wayland is available";
-    wantedBy = [ "default.target" ];
-    pathConfig = {
-      PathExistsGlob = "/run/user/%U/wayland-*";
-      Unit = "polkit-soteria.service";
-      MakeDirectory = false;
     };
   };
 

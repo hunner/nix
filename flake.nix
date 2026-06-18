@@ -107,7 +107,7 @@
         #codex = prev.callPackage ./pkgs/codex/package.nix { };
         flow = prev.callPackage ./pkgs/flow/package.nix { };
         opencode = prev.callPackage ./pkgs/opencode/package.nix { };
-        pi-coding-agent = prev.callPackage ./pkgs/pi-coding-agent/package.nix { };
+        #pi-coding-agent = prev.callPackage ./pkgs/pi-coding-agent/package.nix { };
         xai-grok = prev.callPackage ./pkgs/xai-grok/package.nix { };
         #beads =
         #  let
