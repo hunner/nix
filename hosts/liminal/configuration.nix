@@ -8,8 +8,8 @@
   talon-nix,
   plover-flake,
   #beads-flake,
-  awww,
-  niri,
+  #awww,
+  #niri,
   ... }:
   {
   nix.settings = {
@@ -73,10 +73,10 @@
   services.ollama = {
     enable = true;
     package = pkgs.unstable.ollama-vulkan;
-    loadModels = [ "qwen3.5" "gpt-oss" ];
-    #acceleration = "vulkan";
-    #acceleration = "rocm";
-    #rocmOverrideGfx = "11.0.2";
+    loadModels = [ "qwen3.5" "gpt-oss" "ornith:9b" "ornith:35b" ];
+    environmentVariables = {
+      OLLAMA_IGPU_ENABLE = "1";
+    };
   };
   services.llama-swap = {
     enable = false;
@@ -194,10 +194,10 @@
       pkgs.docker-compose
     ];
   };
-  programs.niri.enable = true;
-  programs.niri.package = niri.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  #programs.niri.enable = true;
+  #programs.niri.package = niri.packages.${pkgs.stdenv.hostPlatform.system}.default;
   programs.hyprland.enable = true;
-  programs.hyprland.xwayland.enable = false;
+  programs.hyprland.xwayland.enable = true;
   programs.hyprland.withUWSM = true;
   # 1Password system unlock uses polkit/PAM; keyring holds auxiliary secrets.
   services.gnome.gnome-keyring.enable = true;
@@ -304,7 +304,7 @@
   services.pipewire = {
     enable = true;
     alsa.enable = true;
-    alsa.support32Bit = true;
+    alsa.support32Bit = lib.mkForce false;
     pulse.enable = true;
     # If you want to use JACK applications, uncomment this
     #jack.enable = true;
@@ -346,7 +346,7 @@
       gh
       pkgs.unstable.cursor-cli
       pkgs.unstable.opencode
-      pkgs.pi-coding-agent
+      pkgs.unstable.pi-coding-agent
       pkgs.xai-grok
       python3
       clang
@@ -465,7 +465,7 @@
       #plover-flake.packages.${pkgs.stdenv.hostPlatform.system}.plover-full
       pkgs.unstable.zoom-us
       #pkgs.beads
-      awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
+      #awww.packages.${pkgs.stdenv.hostPlatform.system}.awww
       nix-index # for nix-locate
       sops
       #bitwarden-desktop
@@ -483,29 +483,47 @@
       kanata
     ];
   };
-  # With Hyprland under UWSM, tie the polkit agent to the graphical session
-  # instead of path-triggering it from the Wayland socket. Keep the XDG
-  # session-id wrapper because systemd --user still doesn't export it here,
-  # and kill any stale soteria process by full command path before starting.
+  # Soteria polkit agent for 1Password system unlock on Hyprland.
+  # systemd --user doesn't export XDG_SESSION_ID; pick the active Wayland
+  # user session (not a stale closing one) and start when the socket exists.
   security.soteria.enable = true;
   systemd.user.services.polkit-soteria = {
-    wantedBy = lib.mkForce [ "graphical-session.target" ];
-    partOf = [ "graphical-session.target" ];
-    after = lib.mkForce [ "graphical-session.target" ];
+    wantedBy = lib.mkForce [ ];
+    wants = lib.mkForce [ ];
+    after = lib.mkForce [ ];
+    unitConfig.StartLimitIntervalSec = 0;
     serviceConfig = {
       ExecStartPre = "-${pkgs.procps}/bin/pkill -f ${lib.getExe pkgs.soteria}";
       ExecStart = lib.mkForce (
         pkgs.writeShellScript "polkit-soteria-wrapper" ''
           if [ -z "''${XDG_SESSION_ID:-}" ]; then
-            XDG_SESSION_ID=$(${pkgs.systemd}/bin/loginctl list-sessions --no-legend \
-              | ${pkgs.gawk}/bin/awk -v uid=$(id -u) '$2 == uid && $6 == "user" { print $1; exit }')
+            for sid in $(${pkgs.systemd}/bin/loginctl list-sessions --no-legend \
+              | ${pkgs.gawk}/bin/awk -v uid=$(id -u) '$2 == uid { print $1 }'); do
+              state=$(${pkgs.systemd}/bin/loginctl show-session "$sid" -p State --value 2>/dev/null)
+              type=$(${pkgs.systemd}/bin/loginctl show-session "$sid" -p Type --value 2>/dev/null)
+              class=$(${pkgs.systemd}/bin/loginctl show-session "$sid" -p Class --value 2>/dev/null)
+              if [ "$state" = "active" ] && [ "$class" = "user" ] && [ "$type" = "wayland" ]; then
+                XDG_SESSION_ID=$sid
+                break
+              fi
+            done
             export XDG_SESSION_ID
           fi
           exec ${lib.getExe pkgs.soteria}
         ''
       );
-      Restart = lib.mkForce "no";
+      Restart = lib.mkForce "on-failure";
+      RestartSec = lib.mkForce 5;
       TimeoutStopSec = 10;
+    };
+  };
+  systemd.user.paths.polkit-soteria-wayland = {
+    description = "Start soteria polkit agent when Wayland is available";
+    wantedBy = [ "default.target" ];
+    pathConfig = {
+      PathExistsGlob = "/run/user/%U/wayland-*";
+      Unit = "polkit-soteria.service";
+      MakeDirectory = false;
     };
   };
 
@@ -539,6 +557,9 @@
     localNetworkGameTransfers.openFirewall = true; # Open ports in the firewall for Steam Local Network Game Transfers
   };
 
+  # Airdrop for linux
+  programs.localsend.enable = true;
+
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
@@ -552,6 +573,7 @@
     curl
     htop
     tmux
+    zellij
     file
     ripgrep
     powertop

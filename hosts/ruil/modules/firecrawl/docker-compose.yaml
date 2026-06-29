@@ -1,0 +1,108 @@
+name: firecrawl
+
+x-common-env: &common-env
+  REDIS_URL: redis://redis:6379
+  REDIS_RATE_LIMIT_URL: redis://redis:6379
+  PLAYWRIGHT_MICROSERVICE_URL: http://playwright-service:3000/scrape
+  POSTGRES_USER: firecrawl
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: firecrawl
+  POSTGRES_HOST: nuq-postgres
+  POSTGRES_PORT: "5432"
+  USE_DB_AUTHENTICATION: "false"
+  NUM_WORKERS_PER_QUEUE: "2"
+  CRAWL_CONCURRENT_REQUESTS: "3"
+  MAX_CONCURRENT_JOBS: "2"
+  BROWSER_POOL_SIZE: "2"
+  BULL_AUTH_KEY: ${BULL_AUTH_KEY}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  TEST_API_KEY: ${TEST_API_KEY:-}
+  SEARXNG_ENDPOINT: https://search.hunner.dev
+  NUQ_RABBITMQ_URL: amqp://rabbitmq:5672
+  ENV: local
+
+services:
+  playwright-service:
+    image: ghcr.io/firecrawl/playwright-service:latest
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      MAX_CONCURRENT_PAGES: "3"
+    networks:
+      - backend
+    cpus: 1.0
+    mem_limit: 1G
+    memswap_limit: 1G
+    tmpfs:
+      - /tmp/.cache:noexec,nosuid,size=512m
+
+  api:
+    image: ghcr.io/firecrawl/firecrawl:latest
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      HOST: 0.0.0.0
+      PORT: "3002"
+      EXTRACT_WORKER_PORT: "3004"
+      WORKER_PORT: "3005"
+      HARNESS_STARTUP_TIMEOUT_MS: "120000"
+    depends_on:
+      redis:
+        condition: service_started
+      playwright-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      nuq-postgres:
+        condition: service_started
+    ports:
+      - "127.0.0.1:3002:3002"
+    networks:
+      - backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    cpus: 2.0
+    mem_limit: 2G
+    memswap_limit: 2G
+    command: node dist/src/harness.js --start-docker
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    networks:
+      - backend
+    command: redis-server --bind 0.0.0.0
+    volumes:
+      - redis-data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  nuq-postgres:
+    image: ghcr.io/firecrawl/nuq-postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: firecrawl
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: firecrawl
+    networks:
+      - backend
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:

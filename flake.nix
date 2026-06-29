@@ -15,8 +15,8 @@
     plover-flake.url = "github:openstenoproject/plover-flake";
     #beads-flake.url = "github:steveyegge/beads?ref=v0.49.6";
     #beads-flake.inputs.nixpkgs.follows = "nixpkgs-25-11";
-    awww.url = "git+https://codeberg.org/LGFae/awww";
-    niri.url = "github:hunner/niri/hunner/focus-to-workspace";
+    #awww.url = "git+https://codeberg.org/LGFae/awww";
+    #niri.url = "github:hunner/niri/hunner/focus-to-workspace";
     #niri.inputs.nixpkgs.follows = "nixpkgs-25-11";
   };
 
@@ -33,8 +33,8 @@
     openclaw-flake,
     plover-flake,
     #beads-flake,
-    awww,
-    niri,
+    #awww,
+    #niri,
     ...
   }:
     let
@@ -44,6 +44,18 @@
         unstable = import nixpkgs-unstable {
           inherit system;
           config.allowUnfree = true;
+          overlays = [
+            # Upstream re-published Install_NDI_SDK_v6_Linux.tar.gz with a new hash.
+            # Remove once nixpkgs-unstable picks up the change.
+            (_final: _prev: {
+              ndi-6 = _prev.ndi-6.overrideAttrs (old: {
+                src = _prev.fetchurl {
+                  url = old.src.url;
+                  hash = "sha256-8DFPJFRG3vxIi2POtGiazxqWWu79ray3BXG7IWqMwYM=";
+                };
+              });
+            })
+          ];
         };
       };
 
@@ -196,12 +208,18 @@
             talon-nix
             plover-flake
             #beads-flake
-            awww
-            niri
+            #awww
+            #niri
             ;
         };
         modules = [
-          ({ ... }: { nixpkgs.overlays = [ overlay-unstable overlay-local ]; })
+          ({ ... }: {
+            nixpkgs.overlays = [
+              overlay-unstable
+              overlay-local
+              (import ./pkgs/ollama-03011-overlay.nix)
+            ];
+          })
           ./hosts/liminal/configuration.nix
           sops-nix.nixosModules.sops
         ];

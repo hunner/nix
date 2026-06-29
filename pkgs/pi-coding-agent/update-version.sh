@@ -19,7 +19,7 @@ sed -i -E 's|^  npmDepsHash = .*;$|  npmDepsHash = lib.fakeHash;|' "$package_nix
 echo "Refreshing package.json and package-lock.json..."
 (
   cd "$script_dir"
-  npm install --package-lock-only --save-exact "@mariozechner/pi-coding-agent@${new_version}"
+  npm install --package-lock-only --save-exact "@earendil-works/pi-coding-agent@${new_version}"
 )
 
 echo "Running nix build to discover the new npmDepsHash..."

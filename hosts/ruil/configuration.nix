@@ -13,6 +13,7 @@
     ./modules/etherpad-lite.nix
     ./modules/flow.nix
     ./modules/forgejo.nix
+    ./modules/firecrawl.nix
     (modulesPath + "/virtualisation/digital-ocean-config.nix")
   ];
 
