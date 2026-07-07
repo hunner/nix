@@ -219,6 +219,14 @@
               overlay-local
               (import ./pkgs/ollama-03011-overlay.nix)
             ];
+            # Point <nixpkgs> and flake:nixpkgs at the locked flake input rather than
+            # the remote channel registry. Otherwise anything that evals <nixpkgs>
+            # (notably nix-direnv, on every cd into a `use nix` dir) re-resolves
+            # flake:nixpkgs over the network once tarball-ttl (1h) expires, stalling
+            # the shell for seconds. The store path below is already GC-rooted by
+            # this system generation, so the lookup is a pure path read.
+            nix.nixPath = [ "nixpkgs=${nixpkgs-26-05}" ];
+            nix.registry.nixpkgs.flake = nixpkgs-26-05;
           })
           ./hosts/liminal/configuration.nix
           sops-nix.nixosModules.sops

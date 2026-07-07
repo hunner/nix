@@ -31,9 +31,7 @@
     initrd.luks.devices."cryptswap".device = "/dev/disk/by-partlabel/disk-nvme0n1-swap";
 
     resumeDevice = "/dev/mapper/cryptswap";
-    kernelParams = [
-      "mem_sleep_default=deep"
-    ];
+    kernelParams = [ ];
     extraModprobeConfig = ''
       options amdgpu cwsr_enable=0 # For ROCm to not crash
     '';
@@ -199,17 +197,7 @@
   programs.hyprland.enable = true;
   programs.hyprland.xwayland.enable = true;
   programs.hyprland.withUWSM = true;
-  # 1Password system unlock uses polkit/PAM; keyring holds auxiliary secrets.
   services.gnome.gnome-keyring.enable = true;
-  systemd.user.services.gnome-keyring = {
-    description = "GNOME Keyring daemon";
-    wantedBy = [ "default.target" ];
-    serviceConfig = {
-      Type = "simple";
-      ExecStart = "${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --start --foreground --components=pkcs11,secrets,ssh";
-      Restart = "on-failure";
-    };
-  };
   programs.hyprlock.enable = true;
   services.hypridle.enable = true;
   programs.waybar.enable = false;
@@ -283,7 +271,7 @@
 
   services.logind.settings.Login = {
     HandlePowerKey = "suspend-then-hibernate";
-    HandleLidSwitch = "suspend-then-hibernate";
+    HandleLidSwitch = "suspend";
   };
 
   systemd.sleep.settings.Sleep = {
@@ -483,50 +471,6 @@
       kanata
     ];
   };
-  # Soteria polkit agent for 1Password system unlock on Hyprland.
-  # systemd --user doesn't export XDG_SESSION_ID; pick the active Wayland
-  # user session (not a stale closing one) and start when the socket exists.
-  security.soteria.enable = true;
-  systemd.user.services.polkit-soteria = {
-    wantedBy = lib.mkForce [ ];
-    wants = lib.mkForce [ ];
-    after = lib.mkForce [ ];
-    unitConfig.StartLimitIntervalSec = 0;
-    serviceConfig = {
-      ExecStartPre = "-${pkgs.procps}/bin/pkill -f ${lib.getExe pkgs.soteria}";
-      ExecStart = lib.mkForce (
-        pkgs.writeShellScript "polkit-soteria-wrapper" ''
-          if [ -z "''${XDG_SESSION_ID:-}" ]; then
-            for sid in $(${pkgs.systemd}/bin/loginctl list-sessions --no-legend \
-              | ${pkgs.gawk}/bin/awk -v uid=$(id -u) '$2 == uid { print $1 }'); do
-              state=$(${pkgs.systemd}/bin/loginctl show-session "$sid" -p State --value 2>/dev/null)
-              type=$(${pkgs.systemd}/bin/loginctl show-session "$sid" -p Type --value 2>/dev/null)
-              class=$(${pkgs.systemd}/bin/loginctl show-session "$sid" -p Class --value 2>/dev/null)
-              if [ "$state" = "active" ] && [ "$class" = "user" ] && [ "$type" = "wayland" ]; then
-                XDG_SESSION_ID=$sid
-                break
-              fi
-            done
-            export XDG_SESSION_ID
-          fi
-          exec ${lib.getExe pkgs.soteria}
-        ''
-      );
-      Restart = lib.mkForce "on-failure";
-      RestartSec = lib.mkForce 5;
-      TimeoutStopSec = 10;
-    };
-  };
-  systemd.user.paths.polkit-soteria-wayland = {
-    description = "Start soteria polkit agent when Wayland is available";
-    wantedBy = [ "default.target" ];
-    pathConfig = {
-      PathExistsGlob = "/run/user/%U/wayland-*";
-      Unit = "polkit-soteria.service";
-      MakeDirectory = false;
-    };
-  };
-
   # Enable automatic login for the user.
   services.displayManager.autoLogin.enable = false;
   services.displayManager.autoLogin.user = "hunner";
@@ -578,6 +522,7 @@
     ripgrep
     powertop
     fortune
+    soteria
     shellcheck
     fd
     framework-tool
@@ -593,6 +538,7 @@
     ifuse
   ];
 
+  services.envfs.enable = true;
   services.usbmuxd.enable = true;
   services.clipmenu.enable = true;
   services.picom = {
@@ -656,8 +602,8 @@
   # services.openssh.enable = true;
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 4096 ];
-  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 4096 ];
+  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 4096 8120 ];
+  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 4096 8120 ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
   systemd.services.upower.enable = true;
@@ -689,18 +635,8 @@
   systemd.services."user@".serviceConfig.Delegate = "cpu io memory pids cpuset";
 
   services.fprintd.enable = true;
-  # Password before fingerprint: correct password unlocks without FP;
-  # empty Enter still falls through to fprintd.
   security.pam.services.polkit-1.fprintAuth = true;
-  security.pam.services.hyprlock.rules.auth.fprintd.order =
-    config.security.pam.services.hyprlock.rules.auth.unix.order + 1;
-  security.pam.services.hyprlock.rules.auth.unix.settings.nullok = lib.mkForce true;
-  security.pam.services.polkit-1.rules.auth.fprintd.order =
-    config.security.pam.services.polkit-1.rules.auth.unix.order + 1;
-  security.pam.services.polkit-1.rules.auth.unix.settings.nullok = lib.mkForce true;
-  security.pam.services.xlock.rules.auth.fprintd.order =
-    config.security.pam.services.xlock.rules.auth.unix.order + 1;
-  security.pam.services.xlock.rules.auth.unix.settings.nullok = lib.mkForce true;
+  security.pam.services.hyprlock.fprintAuth = true;
   #security.pam.services = {
   #  login.fprintAuth = true;
   #  xscreensaver.fprintAuth = true;
