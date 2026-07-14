@@ -202,6 +202,57 @@
   services.hypridle.enable = true;
   programs.waybar.enable = false;
   environment.sessionVariables.NIXOS_OZONE_WL = "1"; # hint electron apps to use wayland
+
+  # Morning pages: at the first opportunity after 04:00 (awake at 4am, resume
+  # from suspend, or first login of the day), open today's daily note in
+  # Obsidian and put it front and center on the focused monitor.
+  systemd.user.services.morning-pages = {
+    description = "Open today's Obsidian daily note front and center";
+    path = [ config.programs.hyprland.package pkgs.jq pkgs.coreutils ];
+    script = ''
+      # May fire right as the session starts; wait for Hyprland to be up.
+      sig=""
+      for _ in $(seq 150); do
+        sig=$(ls -t "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -n1)
+        if [ -n "$sig" ] && HYPRLAND_INSTANCE_SIGNATURE=$sig hyprctl monitors >/dev/null 2>&1; then
+          break
+        fi
+        sig=""
+        sleep 2
+      done
+      [ -n "$sig" ] || { echo "no running Hyprland instance; giving up"; exit 1; }
+      export HYPRLAND_INSTANCE_SIGNATURE=$sig
+
+      note="Morning pages/$(date +%F)"
+      touch "$HOME/ob/first/$note.md"
+      uri="obsidian://open?vault=first&file=$(jq -rn --arg f "$note" '$f|@uri')"
+
+      # Launch via Hyprland so Obsidian inherits the session env and outlives
+      # this oneshot unit; if already running it just receives the URI.
+      hyprctl dispatch "hl.dsp.exec_cmd([[obsidian '$uri']])"
+
+      for _ in $(seq 30); do
+        hyprctl clients -j | jq -e 'any(.[]; .class == "obsidian")' >/dev/null && break
+        sleep 1
+      done
+      ws=$(hyprctl activeworkspace -j | jq -r .id)
+      hyprctl dispatch "hl.dsp.window.move({ workspace = $ws, window = [[class:obsidian]] })"
+      hyprctl dispatch "hl.dsp.focus({ window = [[class:obsidian]] })"
+    '';
+    serviceConfig = {
+      Type = "oneshot";
+      TimeoutStartSec = "10m";
+    };
+  };
+  systemd.user.timers.morning-pages = {
+    description = "Morning pages nag at first opportunity after 04:00";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "*-*-* 04:00:00";
+      Persistent = true; # fire on resume/login if 04:00 was missed
+    };
+  };
+
   programs.zsh.enable = true;
   services.openssh.enable = true;
   services.openssh.settings.PermitRootLogin = "yes";
