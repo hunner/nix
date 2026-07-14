@@ -335,7 +335,7 @@
       pkgs.unstable.cursor-cli
       pkgs.unstable.opencode
       pkgs.unstable.pi-coding-agent
-      pkgs.xai-grok
+      pkgs.unstable.grok-build
       python3
       clang
       clangStdenv
@@ -464,11 +464,12 @@
       plus42
       sox # claude voice
       pkgs.unstable.pi-coding-agent
-      pkgs.xai-grok
+      pkgs.unstable.grok-build
       xrandr-invert-colors
       xcalib
       #lean-ctx
       kanata
+      obsidian
     ];
   };
   # Enable automatic login for the user.
@@ -602,8 +603,8 @@
   # services.openssh.enable = true;
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 4096 8120 ];
-  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 4096 8120 ];
+  networking.firewall.allowedTCPPorts = [ 8080 8081 8082 1234 4096 8120 3000 8000 ];
+  networking.firewall.allowedUDPPorts = [ 8080 8081 8082 1234 4096 8120 3000 8000 ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
   systemd.services.upower.enable = true;
@@ -632,6 +633,9 @@
   };
   programs.dconf.enable = true;
   security.polkit.enable = true;
+  # Restarting polkitd drops session agent registrations (soteria), which
+  # breaks 1Password fingerprint unlock until re-login. Defer to reboot.
+  systemd.services.polkit.restartIfChanged = false;
   systemd.services."user@".serviceConfig.Delegate = "cpu io memory pids cpuset";
 
   services.fprintd.enable = true;

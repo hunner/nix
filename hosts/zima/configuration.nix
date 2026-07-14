@@ -28,10 +28,20 @@
       neededForBoot = true;
     };
   };
-  # TODO postResumeCommands after update
-  boot.initrd.postDeviceCommands = lib.mkAfter ''
-    zfs rollback -r rpool/local/root@blank
-  '';
+  # Impermanence: reset root to blank snapshot each boot (systemd stage 1).
+  boot.initrd.systemd.services.zfs-rollback = {
+    description = "Rollback root ZFS dataset to blank snapshot";
+    wantedBy = [ "initrd.target" ];
+    after = [ "zfs-import-rpool.service" ];
+    before = [ "sysroot.mount" ];
+    requires = [ "zfs-import-rpool.service" ];
+    requiredBy = [ "sysroot.mount" ];
+    unitConfig.DefaultDependencies = "no";
+    serviceConfig.Type = "oneshot";
+    script = ''
+      zfs rollback -r rpool/local/root@blank
+    '';
+  };
 
   networking.hostName = "zima"; # Define your hostname.
   networking.hostId = "78599900";
@@ -102,6 +112,7 @@
     ];
     packages = with pkgs; [
       tree
+      pkgs.unstable.grok-build
     ];
   };
 
@@ -190,7 +201,7 @@
     "hmac-sha2-256-etm@openssh.com"
     "umac-128-etm@openssh.com"
   ];
-  services.openssh.settings.AcceptEnv = "LANG LC_*";
+  services.openssh.settings.AcceptEnv = ["LANG" "LC_*"];
 
   # Old style
   #environment.etc = {

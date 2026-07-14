@@ -115,12 +115,12 @@
       };
 
       overlay-local = final: prev: {
-        lean-ctx = prev.callPackage ./pkgs/lean-ctx/package.nix { };
+        #lean-ctx = prev.callPackage ./pkgs/lean-ctx/package.nix { };
         #codex = prev.callPackage ./pkgs/codex/package.nix { };
         flow = prev.callPackage ./pkgs/flow/package.nix { };
         opencode = prev.callPackage ./pkgs/opencode/package.nix { };
         #pi-coding-agent = prev.callPackage ./pkgs/pi-coding-agent/package.nix { };
-        xai-grok = prev.callPackage ./pkgs/xai-grok/package.nix { };
+        #xai-grok = prev.callPackage ./pkgs/xai-grok/package.nix { };
         #beads =
         #  let
         #    bdBase =
@@ -168,12 +168,13 @@
       };
     in
     {
-      nixosConfigurations.zima = nixpkgs-25-11.lib.nixosSystem {
+      nixosConfigurations.zima = nixpkgs-26-05.lib.nixosSystem {
         inherit system;
         specialArgs = {
           inherit impermanence;
         };
         modules = [
+          ({ ... }: { nixpkgs.overlays = [ overlay-unstable ]; })
           ./hosts/zima/configuration.nix
           sops-nix.nixosModules.sops
         ];
