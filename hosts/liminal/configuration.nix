@@ -590,7 +590,7 @@
     ifuse
   ];
 
-  services.envfs.enable = true;
+  services.envfs.enable = false;
   services.usbmuxd.enable = true;
   services.clipmenu.enable = true;
   services.picom = {
