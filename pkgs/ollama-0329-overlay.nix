@@ -1,29 +1,37 @@
-# Pin ollama to 0.30.11 until nixpkgs-unstable catches up (required for ornith).
+# Pin ollama to 0.32.9 until nixpkgs-unstable catches up (required for muse-glimmer).
+# nixpkgs-unstable is currently 0.32.7; muse needs GlimmerParser (tools/thinking) from 0.32.8+.
 final: prev: let
   inherit (prev.unstable) lib fetchFromGitHub;
 
+  version = "0.32.9";
+
+  # Matches ollama's LLAMA_CPP_VERSION for v0.32.9 (muse-glimmer needs b10353+).
+  llamaCppVersion = "b10353";
   llamaCppSrc = fetchFromGitHub {
     owner = "ggml-org";
     repo = "llama.cpp";
-    rev = "51eae8cfcac4fb403bcf91d1fb524fec0974f510";
-    hash = "sha256-AxMidqvx93b80GqDTgR34RCMdjr/UXDdeztxiXf6sEM=";
+    rev = llamaCppVersion;
+    hash = "sha256-MQP91lL8zQLYcnYw5GlkMvH5sXiES+C6L4/1G3Y6TPY=";
   };
 
   ollamaSrc = fetchFromGitHub {
     owner = "ollama";
     repo = "ollama";
-    rev = "d26a58557d83aa8892bdfa79b3550f5ee969cd1c";
-    hash = "sha256-RQfRnzk5beJqkrK69f3BxK6QdkoEVTkbgEf1DkB6p1U=";
+    rev = "v${version}";
+    hash = "sha256-6BDUXDF5pXL3stffvtNJOnhC0A1xjPv43ZpsxegXm4w=";
   };
+
+  # Same go deps as nixpkgs 0.32.7 (go.mod unchanged across 0.32.7–0.32.9).
+  vendorHash = "sha256-HMwoaFBMbpoy8f0I+O+i7kIa9BslLu3FcVWeaIOkpvs=";
 
   bumpOllama = pkg:
     pkg.overrideAttrs (old: {
-      version = "0.30.11";
+      inherit version;
       src = ollamaSrc;
-      vendorHash = "sha256-lZdGzGb9xRjTm1Rm7/wHjqM490gLznLEndmb4mNbCX0=";
+      inherit vendorHash;
       postPatch = ''
         substituteInPlace version/version.go \
-          --replace-fail 0.0.0 '0.30.11'
+          --replace-fail 0.0.0 '${version}'
 
         rm cmd/launch/*_test.go
         rm -r app

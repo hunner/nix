@@ -13,6 +13,7 @@
     talon-nix.url = "github:nix-community/talon-nix";
     openclaw-flake.url = "github:openclaw/nix-openclaw";
     plover-flake.url = "github:openstenoproject/plover-flake";
+    #comfyui-nix.url = "github:utensils/comfyui-nix";
     #beads-flake.url = "github:steveyegge/beads?ref=v0.49.6";
     #beads-flake.inputs.nixpkgs.follows = "nixpkgs-25-11";
     #awww.url = "git+https://codeberg.org/LGFae/awww";
@@ -32,6 +33,7 @@
     talon-nix,
     openclaw-flake,
     plover-flake,
+    #comfyui-nix,
     #beads-flake,
     #awww,
     #niri,
@@ -208,6 +210,7 @@
             impermanence
             talon-nix
             plover-flake
+            #comfyui-nix
             #beads-flake
             #awww
             #niri
@@ -218,7 +221,7 @@
             nixpkgs.overlays = [
               overlay-unstable
               overlay-local
-              (import ./pkgs/ollama-03011-overlay.nix)
+              (import ./pkgs/ollama-0329-overlay.nix)
             ];
             # Point <nixpkgs> and flake:nixpkgs at the locked flake input rather than
             # the remote channel registry. Otherwise anything that evals <nixpkgs>
@@ -229,6 +232,7 @@
             nix.nixPath = [ "nixpkgs=${nixpkgs-26-05}" ];
             nix.registry.nixpkgs.flake = nixpkgs-26-05;
           })
+          #./hosts/liminal/modules/comfyui
           ./hosts/liminal/configuration.nix
           sops-nix.nixosModules.sops
         ];
