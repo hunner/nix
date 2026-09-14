@@ -9,15 +9,60 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ./modules/vaultwarden.nix
     ./modules/etherpad-lite.nix
     ./modules/flow.nix
     ./modules/forgejo.nix
-    ./modules/firecrawl.nix
+    ./modules/tailnet-only.nix
+    ./modules/tailnet-dns.nix
+
+    # REMOVED 2026-09-02 (owner decision: staying on 1Password).
+    # ./modules/vaultwarden.nix is left in the tree but no longer imported, so
+    # the service and the warden.hunner.dev vhost are both gone. The module also
+    # declared sops.secrets.vaultwarden-env, which is now unused; the
+    # vaultwarden-env key is still present in ./secrets/config.yaml.
+    #
+    # DATA IS DELIBERATELY NOT DELETED. Still on the host:
+    #   /var/lib/vaultwarden                                   (live state dir)
+    #   /root/backups/2026-09-02-pre-upgrade/vaultwarden-full
+    #   /root/backups/2026-09-02-pre-upgrade/vaultwarden-db.sqlite3
+    # Deleting those is a separate, deliberate owner decision.
+    # ./modules/vaultwarden.nix
+
+    # DISABLED 2026-09-02, not deleted -- ./modules/firecrawl.nix declares
+    # `sops.secrets.firecrawl-env`, but no `firecrawl-env` key exists in
+    # ./secrets/config.yaml. sops-install-secrets validates the manifest at
+    # build time, so importing this module fails the build of the whole host:
+    #
+    #   secret firecrawl-env in .../config.yaml is not valid:
+    #   the key 'firecrawl-env' cannot be found
+    #
+    # That made ruil undeployable, which was blocking an urgent security
+    # rebuild. Firecrawl has never actually run here (no firecrawl.service on
+    # the host, docker not running, no firecrawl-env in /run/secrets), so
+    # commenting out the import changes no running service.
+    #
+    # To re-enable: add the key with `sops edit hosts/ruil/secrets/config.yaml`,
+    # then uncomment the import below.
+    # ./modules/firecrawl.nix
     (modulesPath + "/virtualisation/digital-ocean-config.nix")
   ];
 
   networking.hostName = "ruil";
+
+  # nodejs 20 went EOL and 26.05 marks it insecure. It is pulled in by
+  # pkgs.flow, whose vendored Next.js is version 12 era and is not expected to
+  # run on a current Node major, so bumping it is a real port rather than a
+  # version bump. Accepted here for now because flow (epub.hunner.dev) is no
+  # longer reachable from the internet -- see ./modules/tailnet-only.nix -- and
+  # its listener is bound to loopback, so reaching it means already being on the
+  # tailnet.
+  #
+  # FOLLOW-UP: port flow to a supported nodejs and drop this. It is the only
+  # thing keeping an EOL Node runtime on this host.
+  nixpkgs.config.permittedInsecurePackages = [
+    "nodejs-20.20.2"
+    "nodejs-slim-20.20.2"
+  ];
 
   system.stateVersion = "25.11";
 
@@ -127,6 +172,12 @@
     settings.general.open_metrics = "$SEARX_METRICS_PASSWORD";
   };
 
+  # The searx module points its uwsgi vassal at both a unix socket and an HTTP
+  # listener, and the HTTP one defaults to ":8080" -- every interface, which
+  # bypasses nginx and therefore also bypasses the tailnet ACL. nginx talks to
+  # the unix socket, so pin the HTTP listener to loopback.
+  services.uwsgi.instance.vassals.searx.http = lib.mkForce "127.0.0.1:8080";
+
   services.nginx.virtualHosts."search.hunner.dev" = {
     enableACME = true;
     forceSSL = true;
@@ -204,8 +255,14 @@
   ];
 
   # Firewall
+  #
+  # 80/443 stay open because nginx still serves the public apex and the ACME
+  # http-01 challenges for every vhost; the tailnet-only vhosts are gated inside
+  # nginx by ./modules/tailnet-only.nix rather than at the packet filter.
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [ 22 80 443 ];
+    # Let Tailscale negotiate direct connections instead of relaying via DERP.
+    allowedUDPPorts = [ 41641 ];
   };
 }

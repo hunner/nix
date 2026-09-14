@@ -60,6 +60,15 @@ stdenv.mkDerivation (finalAttrs: {
     cp -R apps/reader/.next/static $out/share/flow/apps/reader/.next/static
     cp -R apps/reader/public $out/share/flow/apps/reader/public
 
+    # The vendored Next.js standalone server calls `server.listen(currentPort)`
+    # with no host argument, so it always binds 0.0.0.0/[::] and reads PORT but
+    # never HOSTNAME. Make the bind address configurable, defaulting to the
+    # previous behaviour so this stays a no-op unless HOSTNAME is set.
+    substituteInPlace $out/share/flow/apps/reader/server.js \
+      --replace-fail \
+        'server.listen(currentPort, (err) => {' \
+        "server.listen(currentPort, process.env.HOSTNAME || '0.0.0.0', (err) => {"
+
     makeWrapper ${lib.getExe nodejs_20} $out/bin/flow \
       --add-flags $out/share/flow/apps/reader/server.js
 

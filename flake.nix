@@ -13,6 +13,11 @@
     talon-nix.url = "github:nix-community/talon-nix";
     openclaw-flake.url = "github:openclaw/nix-openclaw";
     plover-flake.url = "github:openstenoproject/plover-flake";
+    # Local-only webcam/mic flight recorder. Points at the working tree until
+    # the repo is pushed; switch to
+    # "git+ssh://git@git.hunner.dev/hunner/flightrec.git" afterwards.
+    #flightrec.url = "git+file:///home/hunner/Documents/git/flightrec";
+    #flightrec.inputs.nixpkgs.follows = "nixpkgs-26-05";
     #comfyui-nix.url = "github:utensils/comfyui-nix";
     #beads-flake.url = "github:steveyegge/beads?ref=v0.49.6";
     #beads-flake.inputs.nixpkgs.follows = "nixpkgs-25-11";
@@ -33,6 +38,7 @@
     talon-nix,
     openclaw-flake,
     plover-flake,
+    #flightrec,
     #comfyui-nix,
     #beads-flake,
     #awww,
@@ -118,7 +124,8 @@
 
       overlay-local = final: prev: {
         #lean-ctx = prev.callPackage ./pkgs/lean-ctx/package.nix { };
-        #codex = prev.callPackage ./pkgs/codex/package.nix { };
+        cliairplay = prev.callPackage ./pkgs/cliairplay/package.nix { };
+        codex = prev.callPackage ./pkgs/codex/package.nix { };
         flow = prev.callPackage ./pkgs/flow/package.nix { };
         opencode = prev.callPackage ./pkgs/opencode/package.nix { };
         #pi-coding-agent = prev.callPackage ./pkgs/pi-coding-agent/package.nix { };
@@ -193,7 +200,11 @@
         ];
       };
 
-      nixosConfigurations.ruil = nixpkgs-25-11.lib.nixosSystem {
+      # Moved 25.11 -> 26.05 on 2026-09-02. 25.11 is EOL, and its forgejo-lts
+      # (11.0.15) and forgejo (15.0.3) are both unpatched against
+      # CVE-2026-60004; Forgejo 11 LTS ended 2026-07-16 so no fixed 11.x will
+      # ever exist. 26.05 ships forgejo-lts 15.0.7, which carries the fix.
+      nixosConfigurations.ruil = nixpkgs-26-05.lib.nixosSystem {
         inherit system;
         modules = [
           ({ ... }: { nixpkgs.overlays = [ overlay-unstable overlay-etherpad-fixes overlay-local ]; })
@@ -233,8 +244,12 @@
             nix.registry.nixpkgs.flake = nixpkgs-26-05;
           })
           #./hosts/liminal/modules/comfyui
+          ./hosts/liminal/modules/airplay
+          ./hosts/liminal/modules/yubikey-touch-chime
+          ./hosts/liminal/modules/agents-gpg-bridge
           ./hosts/liminal/configuration.nix
           sops-nix.nixosModules.sops
+          #flightrec.nixosModules.flightrec
         ];
       };
     };
