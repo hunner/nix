@@ -36,6 +36,11 @@ deploy-zima:
 deploy-cryochamber:
   just deploy-auto cryochamber root@cryochamber
 
+# Shortcut: deploy slice (nix-darwin, macOS -- always local, always sudo)
+deploy-slice:
+  sudo darwin-rebuild switch \
+    --flake .#slice
+
 update-package package version="":
   if [ -n "{{version}}" ]; then scripts/update-local-package {{package}} --version {{version}}; else scripts/update-local-package {{package}}; fi
 

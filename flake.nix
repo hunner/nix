@@ -1,5 +1,5 @@
 {
-  description = "NixOS configurations for zima, cryochamber, liminal, and ruil";
+  description = "NixOS configurations for zima, cryochamber, liminal, and ruil; nix-darwin configuration for slice";
 
   inputs = {
     nixpkgs-25-11.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -7,6 +7,8 @@
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager.url = "github:nix-community/home-manager/release-26.05";
     home-manager.inputs.nixpkgs.follows = "nixpkgs-26-05";
+    nix-darwin.url = "github:nix-darwin/nix-darwin/master";
+    nix-darwin.inputs.nixpkgs.follows = "nixpkgs-unstable";
     sops-nix.url = "github:Mic92/sops-nix";
     nixos-hardware.url = "github:NixOS/nixos-hardware";
     impermanence.url = "github:nix-community/impermanence";
@@ -32,6 +34,7 @@
     nixpkgs-26-05,
     nixpkgs-unstable,
     home-manager,
+    nix-darwin,
     sops-nix,
     nixos-hardware,
     impermanence,
@@ -250,6 +253,14 @@
           ./hosts/liminal/configuration.nix
           sops-nix.nixosModules.sops
           #flightrec.nixosModules.flightrec
+        ];
+      };
+
+      # The `system` in the let above is x86_64-linux and both overlays close
+      # over it, so slice must not use `inherit system` or those overlays.
+      darwinConfigurations.slice = nix-darwin.lib.darwinSystem {
+        modules = [
+          ./hosts/slice/configuration.nix
         ];
       };
     };
