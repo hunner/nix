@@ -14,6 +14,15 @@
     impermanence.url = "github:nix-community/impermanence";
     talon-nix.url = "github:nix-community/talon-nix";
     openclaw-flake.url = "github:openclaw/nix-openclaw";
+    # Exposes packages.default, which builds the .app by running upstream's own
+    # scripts/build.sh. Needs `sandbox = false`, which slice has.
+    squire-village.url = "git+ssh://git@github.com/ConductorOne/squire-village.git?ref=nix-dev-shell";
+    # The CLI that Squire Village drives. Tracks the default branch; the exact
+    # revision is whatever flake.lock holds, and `nix flake update squire-cli`
+    # moves it. Each bump needs a new vendorHash, which nix prints on the first
+    # failed build.
+    squire-cli.url = "git+ssh://git@github.com/ductone/squire.git";
+    squire-cli.flake = false;
     plover-flake.url = "github:openstenoproject/plover-flake";
     # Local-only webcam/mic flight recorder. Points at the working tree until
     # the repo is pushed; switch to
@@ -41,6 +50,8 @@
     talon-nix,
     openclaw-flake,
     plover-flake,
+    squire-village,
+    squire-cli,
     #flightrec,
     #comfyui-nix,
     #beads-flake,
@@ -259,7 +270,13 @@
       # The `system` in the let above is x86_64-linux and both overlays close
       # over it, so slice must not use `inherit system` or those overlays.
       darwinConfigurations.slice = nix-darwin.lib.darwinSystem {
+        specialArgs = {
+          squireVillage = squire-village;
+          squireCliSrc = squire-cli;
+        };
         modules = [
+          ./hosts/slice/modules/squire-cli
+          ./hosts/slice/modules/squire-village
           ./hosts/slice/configuration.nix
         ];
       };
