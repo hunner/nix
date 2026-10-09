@@ -163,31 +163,11 @@
     port = 11434;
     settings = let
       llamaServer = lib.getExe' pkgs.unstable.llama-cpp-vulkan "llama-server";
+      # One vision tower for both 35B-A3B quants. F16: the 780M Vulkan
+      # path is unreliable with a BF16 projector.
+      mmproj35b = "/var/lib/llama-swap/models/mmproj-Qwen_Qwen3.5-35B-A3B-f16.gguf";
     in {
-      hooks.on_startup.preload = [ "qwen3.8:27b" ];
-      # Benchmarked 2026-08-16 on the 780M iGPU, 250-token decode with MTP:
-      # Q4_K_M 6.6 t/s, Q5_K_M 5.4 t/s, IQ4_XS 5.0 t/s (IQ dequant is
-      # compute-bound on Vulkan, so the smaller file loses). Without MTP all
-      # sit at 3.7-4.3 t/s.
-      models."qwen3.8:27b" = {
-        cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen3.8-27B-Uncensored-Q4_K_M.gguf -c 151072 -ngl 999 -fa 1 --jinja --parallel 1 --spec-type draft-mtp --spec-draft-n-max 2 --spec-draft-p-min 0.6 --cache-type-k q8_0 --cache-type-v q8_0 --temp 0.55 --top-p 0.9 --top-k 40 --repeat-penalty 1.1";
-      };
-      models."qwen3.8:27b-q5" = {
-        cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen3.8-27B-Uncensored-Q5_K_M.gguf -c 131072 -ngl 999 -fa 1 --jinja --parallel 1 --spec-type draft-mtp --spec-draft-n-max 2 --spec-draft-p-min 0.6 --cache-type-k q8_0 --cache-type-v q8_0 --temp 0.55 --top-p 0.9 --top-k 40 --repeat-penalty 1.1";
-        aliases = [ "bughunt" ];
-      };
-      # outsourc-e Unleashed (Heretic abliteration, Unsloth Dynamic v3 quants,
-      # MTP tensors kept). The author's 4090 table (X @outsource_, 2026-08-21)
-      # has UD-Q3_K_XL at better PPL than UD-Q4 (6.399 vs 6.418) at 13.2 GB vs
-      # 16.5 GB, so the Q3 should win on this bandwidth-bound iGPU; Q3_K
-      # dequant is cheap on Vulkan, unlike the IQ quants above. p-min 0.75:
-      # gating helps bandwidth-starved rigs (M5 MacBook went 7.2->10.5 t/s at
-      # p-min 0.8; fast desktop cards prefer no gate). q4_0 KV and samplers
-      # are the model-card recommendation. Benchmarked 2026-08-21, 250-token
-      # decode at temp 0: UD-Q3_K_XL 7.5 t/s (93% draft acceptance), UD-Q4_K_M
-      # 6.0 t/s. Raising n-max needs a rebuild per value (the server clamps
-      # per-request overrides to the CLI ceiling); 890M peaked at 2, Strix
-      # Halo at 12, and temp-0 acceptance overstates what temp 1.0 will get.
+      hooks.on_startup.preload = [ "qwen3.5:35b-aggressive" ];
       models."qwen3.8:27b-unleashed" = {
         cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen3.8-27B-Unleashed-UD-Q3_K_XL.gguf -c 262144 -ngl 999 -fa 1 --jinja --parallel 1 -b 2048 -ub 512 --cache-reuse 256 --spec-type draft-mtp --spec-draft-n-max 2 --spec-draft-p-min 0.75 --cache-type-k q4_0 --cache-type-v q4_0 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --repeat-penalty 1.0";
         aliases = [ "unleashed" ];
@@ -196,9 +176,9 @@
         cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen_Qwen3.5-4B-Q5_K_L.gguf -c 65536";
         aliases = [ "qwen" ];
       };
-      models."qwen3.5:35b" = {
-        cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen_Qwen3.5-35B-A3B-Q5_K_L.gguf -c 65536 --mmap --gpu-layers 35";
-        aliases = [ "qwen3.5" ];
+      models."qwen3.5:35b-aggressive" = {
+        cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q5_K_M.gguf -c 131072 --mmap --gpu-layers 40 -fa 1 --jinja --mmproj ${mmproj35b}";
+        aliases = [ "aggressive" ];
       };
     };
   };
