@@ -16,7 +16,7 @@ buildGoModule {
   # The repo builds several binaries; only the CLI is wanted here.
   subPackages = [ "cmd/squire" ];
 
-  vendorHash = "sha256-oOXULqHqsGtMLy3MLDpeJWPO57Gi0lPv4r9Po72ZO1s=";
+  vendorHash = "sha256-cxVd8XQmkGtc6AHCHNctcgkrvviQW31eAyj7Ma7g2zg=";
 
   # Upstream's Makefile stamps these. `go install` gets a version string for
   # free from the module cache, but buildGoModule compiles a plain source tree

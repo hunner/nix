@@ -95,6 +95,57 @@ let
         + " --cache-type-k q4_0 --cache-type-v q4_0"
         + " --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --repeat-penalty 1.0";
     };
+
+    # HauhauCS Aggressive, Qwen3.5-35B-A3B, imatrix Q3_K_M (15.6 GiB).
+    # Liminal serves the Q5_K_M of this same repo (23.1 GiB), with the shared
+    # f16 mmproj, context 131072, and all 40 layers on the GPU. That file is
+    # larger than this machine's 18.6 GiB Metal working set, so the quant
+    # here is Q3_K_M.
+    #
+    # This GGUF has no MTP tensors. On a 256-token coding prompt, ngram-simple
+    # decoded at 79.7 t/s and ngram-map-k4v at 80.8, against 81.5 with no
+    # drafter. The server disables --cache-reuse for this hybrid cache.
+    #
+    # llama-bench on 2026-10-10, three repetitions, 512 prompt tokens and 256
+    # generated tokens, empty cache. Decode stays at 84 t/s for the flag sets
+    # that keep every layer on the GPU:
+    #
+    #   fa on 84.15 t/s, fa off 84.22. fa off runs out of Metal memory at
+    #   32768 and at 65536. fa on holds 65536.
+    #   KV f16 84.2 t/s, q8_0 82.7, q4_0 81.5.
+    #   ubatch 128 prompt 961 t/s, ubatch 256 prompt 1248, ubatch 512 prompt
+    #   1462. ubatch 1024 and 2048 match 512, so 512 stays.
+    #   batch 512, 2048, and 4096 match on prompt and decode.
+    #   threads 5 (the performance cores) 84.2 t/s, threads 8 84.6, threads 15
+    #   71.5. The command pins 5, which is the setting that was measured.
+    #   n-cpu-moe 4/8/16 decodes at 70/53/32 t/s.
+    #   mlock moved about 900 MB through swap and matched mmap. mmap stays.
+    #
+    # Decode slows as the cache fills: 84 t/s at depth 0, 78 at 2048, 65 at
+    # 8192. A short prompt does not pay that.
+    #
+    # llama-server, 128-token coding prompt, temperature 1.0, fa on:
+    #
+    #   -c 65536, f16 KV     81.1 t/s
+    #   -c 65536, q8_0 KV    79.8 t/s
+    #   -c 65536, q4_0 KV    79.4 t/s
+    #   -c 131072, f16 KV    fails to allocate
+    #   -c 131072, q4_0 KV   79.0 t/s
+    #   -c 262144, q4_0 KV   fails to allocate
+    #
+    # 65536 with f16 KV is the speed pick, and it matches Unleashed's window
+    # on this machine. For a longer window, switch the KV cache to q4_0
+    # before raising -c. Sampling flags are the HauhauCS card.
+    models."qwen3.5:35b-aggressive" = {
+      aliases = [ "aggressive" "qwen3.5" ];
+      ttl = 600;
+      cmd = "${llamaServer} --port \${PORT}"
+        + " -m ${llamaModelsDir}/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q3_K_M.gguf"
+        + " -c 65536 -ngl 999 -fa on --jinja --parallel 1"
+        + " -b 2048 -ub 512 -t 5"
+        + " --cache-type-k f16 --cache-type-v f16"
+        + " --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --repeat-penalty 1.0 --presence-penalty 1.5";
+    };
   };
 
   # AeroSpace is run from a local fork while three fixes are in flight
