@@ -3,8 +3,10 @@
   stdenv,
   fetchFromGitHub,
   makeWrapper,
-  nodejs_20,
-  pnpm_10,
+  fetchPnpmDeps,
+  nodejs_24,
+  pnpm_10_latest,
+  pnpmConfigHook,
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "flow";
@@ -17,17 +19,18 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-Bro3DrYNtBvPKCOJBZMb7EBRrAnsC/3QIdKnLvo6FJA=";
   };
 
-  pnpmDeps = pnpm_10.fetchDeps {
+  pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
-    fetcherVersion = 3;
-    pnpm = pnpm_10;
-    hash = "sha256-+m5PTXjmSQcH98T3MmrBRds8JBCHiq0qmRP3JjISUAc=";
+    fetcherVersion = 4;
+    pnpm = pnpm_10_latest;
+    hash = "sha256-Ps1VkeDhPxd9LWJVO/QfI6M3axf6JUKmQPuVIDdD98g=";
   };
 
   nativeBuildInputs = [
     makeWrapper
-    nodejs_20
-    pnpm_10.configHook
+    nodejs_24
+    pnpm_10_latest
+    pnpmConfigHook
   ];
 
   env = {
@@ -69,7 +72,7 @@ stdenv.mkDerivation (finalAttrs: {
         'server.listen(currentPort, (err) => {' \
         "server.listen(currentPort, process.env.HOSTNAME || '0.0.0.0', (err) => {"
 
-    makeWrapper ${lib.getExe nodejs_20} $out/bin/flow \
+    makeWrapper ${lib.getExe nodejs_24} $out/bin/flow \
       --add-flags $out/share/flow/apps/reader/server.js
 
     runHook postInstall
@@ -80,7 +83,7 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://github.com/pacexy/flow";
     license = lib.licenses.agpl3Only;
     mainProgram = "flow";
-    platforms = nodejs_20.meta.platforms;
+    platforms = nodejs_24.meta.platforms;
   };
 
   dontCheckForBrokenSymlinks = true;

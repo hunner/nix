@@ -29,12 +29,6 @@
     # "git+ssh://git@git.hunner.dev/hunner/flightrec.git" afterwards.
     #flightrec.url = "git+file:///home/hunner/Documents/git/flightrec";
     #flightrec.inputs.nixpkgs.follows = "nixpkgs-26-05";
-    #comfyui-nix.url = "github:utensils/comfyui-nix";
-    #beads-flake.url = "github:steveyegge/beads?ref=v0.49.6";
-    #beads-flake.inputs.nixpkgs.follows = "nixpkgs-25-11";
-    #awww.url = "git+https://codeberg.org/LGFae/awww";
-    #niri.url = "github:hunner/niri/hunner/focus-to-workspace";
-    #niri.inputs.nixpkgs.follows = "nixpkgs-25-11";
   };
 
   outputs = {
@@ -53,10 +47,6 @@
     squire-village,
     squire-cli,
     #flightrec,
-    #comfyui-nix,
-    #beads-flake,
-    #awww,
-    #niri,
     ...
   }:
     let
@@ -144,50 +134,6 @@
         opencode = prev.callPackage ./pkgs/opencode/package.nix { };
         #pi-coding-agent = prev.callPackage ./pkgs/pi-coding-agent/package.nix { };
         #xai-grok = prev.callPackage ./pkgs/xai-grok/package.nix { };
-        #beads =
-        #  let
-        #    bdBase =
-        #      (
-        #        final.callPackage "${beads-flake}/default.nix" {
-        #          pkgs = final;
-        #          self = beads-flake;
-        #        }
-        #      ).overrideAttrs
-        #        (old: {
-        #          vendorHash = "sha256-RyOxrW0C+2E+ULhGeF2RbUhaUFt58sux7neHPei5QJI=";
-        #          env = (old.env or { }) // {
-        #            # Upstream pulls an ICU-backed regex dep; keep Nix build pure-Go.
-        #            CGO_ENABLED = "0";
-        #          };
-        #          postPatch =
-        #            (old.postPatch or "")
-        #            + ''
-        #              # Upstream source currently references a removed internal package.
-        #              rm -f cmd/bd/integration_test_stubs_test.go
-        #              rm -rf examples/monitor-webui
-        #            '';
-        #        });
-        #  in
-        #  final.stdenv.mkDerivation {
-        #    pname = "beads";
-        #    version = bdBase.version;
-        #    phases = [ "installPhase" ];
-        #    installPhase = ''
-        #      mkdir -p $out/bin
-        #      cp ${bdBase}/bin/bd $out/bin/bd
-
-        #      ln -s bd $out/bin/beads
-
-        #      mkdir -p $out/share/fish/vendor_completions.d
-        #      mkdir -p $out/share/bash-completion/completions
-        #      mkdir -p $out/share/zsh/site-functions
-
-        #      $out/bin/bd completion fish > $out/share/fish/vendor_completions.d/bd.fish
-        #      $out/bin/bd completion bash > $out/share/bash-completion/completions/bd
-        #      $out/bin/bd completion zsh > $out/share/zsh/site-functions/_bd
-        #    '';
-        #    meta = bdBase.meta;
-        #  };
       };
     in
     {
@@ -235,10 +181,6 @@
             impermanence
             talon-nix
             plover-flake
-            #comfyui-nix
-            #beads-flake
-            #awww
-            #niri
             ;
         };
         modules = [
@@ -257,7 +199,6 @@
             nix.nixPath = [ "nixpkgs=${nixpkgs-26-05}" ];
             nix.registry.nixpkgs.flake = nixpkgs-26-05;
           })
-          #./hosts/liminal/modules/comfyui
           ./hosts/liminal/modules/airplay
           ./hosts/liminal/modules/yubikey-touch-chime
           ./hosts/liminal/modules/agents-gpg-bridge

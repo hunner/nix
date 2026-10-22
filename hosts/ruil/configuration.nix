@@ -9,7 +9,7 @@
 {
   imports = [
     ./hardware-configuration.nix
-    ./modules/etherpad-lite.nix
+    #./modules/etherpad-lite.nix
     ./modules/flow.nix
     ./modules/forgejo.nix
     ./modules/tailnet-only.nix
@@ -49,21 +49,6 @@
 
   networking.hostName = "ruil";
 
-  # nodejs 20 went EOL and 26.05 marks it insecure. It is pulled in by
-  # pkgs.flow, whose vendored Next.js is version 12 era and is not expected to
-  # run on a current Node major, so bumping it is a real port rather than a
-  # version bump. Accepted here for now because flow (epub.hunner.dev) is no
-  # longer reachable from the internet -- see ./modules/tailnet-only.nix -- and
-  # its listener is bound to loopback, so reaching it means already being on the
-  # tailnet.
-  #
-  # FOLLOW-UP: port flow to a supported nodejs and drop this. It is the only
-  # thing keeping an EOL Node runtime on this host.
-  nixpkgs.config.permittedInsecurePackages = [
-    "nodejs-20.20.2"
-    "nodejs-slim-20.20.2"
-  ];
-
   system.stateVersion = "25.11";
 
   # Enable nix flakes
@@ -82,14 +67,14 @@
   sops.secrets.hashedPassword-hunner.neededForUsers = true;
   sops.secrets.hashedPassword-ruil.neededForUsers = true;
   sops.secrets.hashedPassword-root.neededForUsers = true;
-  sops.secrets.searx-env = {
-    owner = "searx";
-    mode = "0400";
-  };
-  sops.secrets.searx-nginx-basic-auth = {
-    owner = "nginx";
-    mode = "0400";
-  };
+  #sops.secrets.searx-env = {
+  #  owner = "searx";
+  #  mode = "0400";
+  #};
+  #sops.secrets.searx-nginx-basic-auth = {
+  #  owner = "nginx";
+  #  mode = "0400";
+  #};
   #sops.secrets.openclaw-env = {
   #  owner = "ruil";
   #  mode = "0400";
@@ -160,60 +145,60 @@
   };
 
   # SearXNG
-  services.searx = {
-    enable = true;
-    configureNginx = true;
-    redisCreateLocally = true;
-    domain = "search.hunner.dev";
-    environmentFile = config.sops.secrets.searx-env.path;
-    settings.server.secret_key = "$SEARX_SECRET_KEY";
-    settings.server.limiter = true;
-    settings.server.base_url = lib.mkForce "https://search.hunner.dev/";
-    settings.general.open_metrics = "$SEARX_METRICS_PASSWORD";
-  };
+  #services.searx = {
+  #  enable = true;
+  #  configureNginx = true;
+  #  redisCreateLocally = true;
+  #  domain = "search.hunner.dev";
+  #  environmentFile = config.sops.secrets.searx-env.path;
+  #  settings.server.secret_key = "$SEARX_SECRET_KEY";
+  #  settings.server.limiter = true;
+  #  settings.server.base_url = lib.mkForce "https://search.hunner.dev/";
+  #  settings.general.open_metrics = "$SEARX_METRICS_PASSWORD";
+  #};
 
   # The searx module points its uwsgi vassal at both a unix socket and an HTTP
   # listener, and the HTTP one defaults to ":8080" -- every interface, which
   # bypasses nginx and therefore also bypasses the tailnet ACL. nginx talks to
   # the unix socket, so pin the HTTP listener to loopback.
-  services.uwsgi.instance.vassals.searx.http = lib.mkForce "127.0.0.1:8080";
+  #services.uwsgi.instance.vassals.searx.http = lib.mkForce "127.0.0.1:8080";
 
-  services.nginx.virtualHosts."search.hunner.dev" = {
-    enableACME = true;
-    forceSSL = true;
+  #services.nginx.virtualHosts."search.hunner.dev" = {
+  #  enableACME = true;
+  #  forceSSL = true;
 
-    # Protect metrics with nginx Basic Auth and forward the auth header so
-    # SearXNG can validate `general.open_metrics`.
-    locations."= /metrics" = {
-      basicAuthFile = config.sops.secrets.searx-nginx-basic-auth.path;
-      recommendedUwsgiSettings = true;
-      uwsgiPass = "unix:${config.services.uwsgi.instance.vassals.searx.socket}";
-      extraConfig = ''
-        uwsgi_param  HTTP_AUTHORIZATION   $http_authorization;
-        uwsgi_param  HTTP_HOST            $host;
-        uwsgi_param  HTTP_CONNECTION      $http_connection;
-        uwsgi_param  HTTP_X_SCHEME        $scheme;
-        uwsgi_param  HTTP_X_SCRIPT_NAME   "";
-        uwsgi_param  HTTP_X_REAL_IP       $remote_addr;
-        uwsgi_param  HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
-      '';
-    };
+  #  # Protect metrics with nginx Basic Auth and forward the auth header so
+  #  # SearXNG can validate `general.open_metrics`.
+  #  locations."= /metrics" = {
+  #    basicAuthFile = config.sops.secrets.searx-nginx-basic-auth.path;
+  #    recommendedUwsgiSettings = true;
+  #    uwsgiPass = "unix:${config.services.uwsgi.instance.vassals.searx.socket}";
+  #    extraConfig = ''
+  #      uwsgi_param  HTTP_AUTHORIZATION   $http_authorization;
+  #      uwsgi_param  HTTP_HOST            $host;
+  #      uwsgi_param  HTTP_CONNECTION      $http_connection;
+  #      uwsgi_param  HTTP_X_SCHEME        $scheme;
+  #      uwsgi_param  HTTP_X_SCRIPT_NAME   "";
+  #      uwsgi_param  HTTP_X_REAL_IP       $remote_addr;
+  #      uwsgi_param  HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+  #    '';
+  #  };
 
-    # Protect stats endpoints (/stats, /stats/errors, /stats/checker).
-    locations."^~ /stats" = {
-      basicAuthFile = config.sops.secrets.searx-nginx-basic-auth.path;
-      recommendedUwsgiSettings = true;
-      uwsgiPass = "unix:${config.services.uwsgi.instance.vassals.searx.socket}";
-      extraConfig = ''
-        uwsgi_param  HTTP_HOST            $host;
-        uwsgi_param  HTTP_CONNECTION      $http_connection;
-        uwsgi_param  HTTP_X_SCHEME        $scheme;
-        uwsgi_param  HTTP_X_SCRIPT_NAME   "";
-        uwsgi_param  HTTP_X_REAL_IP       $remote_addr;
-        uwsgi_param  HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
-      '';
-    };
-  };
+  #  # Protect stats endpoints (/stats, /stats/errors, /stats/checker).
+  #  locations."^~ /stats" = {
+  #    basicAuthFile = config.sops.secrets.searx-nginx-basic-auth.path;
+  #    recommendedUwsgiSettings = true;
+  #    uwsgiPass = "unix:${config.services.uwsgi.instance.vassals.searx.socket}";
+  #    extraConfig = ''
+  #      uwsgi_param  HTTP_HOST            $host;
+  #      uwsgi_param  HTTP_CONNECTION      $http_connection;
+  #      uwsgi_param  HTTP_X_SCHEME        $scheme;
+  #      uwsgi_param  HTTP_X_SCRIPT_NAME   "";
+  #      uwsgi_param  HTTP_X_REAL_IP       $remote_addr;
+  #      uwsgi_param  HTTP_X_FORWARDED_FOR $proxy_add_x_forwarded_for;
+  #    '';
+  #  };
+  #};
 
   # Apex site with its own cert so Cloudflare Full (strict) sees a matching
   # origin certificate for `hunner.dev` instead of falling through to another
