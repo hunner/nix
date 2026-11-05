@@ -179,61 +179,52 @@
     port = 11434;
     settings = let
       llamaServer = lib.getExe' pkgs.unstable.llama-cpp-vulkan "llama-server";
-      # One vision tower for both 35B-A3B quants. F16: the 780M Vulkan
-      # path is unreliable with a BF16 projector.
-      mmproj35b = "/var/lib/llama-swap/models/mmproj-Qwen_Qwen3.5-35B-A3B-f16.gguf";
-      # The 3.6 finetune ships its own F16 projector (same qwen3vl_merger).
+      # The 3.6 finetune ships its own F16 projector (qwen3vl_merger). F16:
+      # the 780M Vulkan path is unreliable with a BF16 projector.
       mmproj36 = "/var/lib/llama-swap/models/mmproj-Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-f16.gguf";
-      # Chat sampling for the 35B-A3B models, which otherwise ran on
-      # llama.cpp's defaults (temp 0.8, no penalties) and got stuck on
-      # whatever topic was in context. Hermes sends no sampling params for
-      # chat; a request's own values (e.g. temperature on side calls) still
-      # win. Qwen's thinking-mode "general" set (Hermes runs with reasoning
-      # on), which HauhauCS's cards repeat unchanged.
-      # llama-server feeds the whole prompt into the penalty history, so the
-      # windows count back across the chat, not just the reply:
-      # - presence penalty keeps the 64-token default window. Widened, it
-      #   would tax every common word in an 80k chat.
-      # - DRY (0.8/1.75/2 are its usual values) looks back 8k tokens, a few
-      #   turns, to break phrases recycled from earlier replies. Tool calls
-      #   are grammar-constrained, so it cannot bend their syntax.
-      qwenChatSampling = "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-last-n 64 --dry-multiplier 0.8 --dry-base 1.75 --dry-allowed-length 2 --dry-penalty-last-n 8192";
+      qwenChatSampling = "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-last-n 64";
       docker = lib.getExe' config.virtualisation.docker.package "docker";
-      # ComfyUI (ROCm) in the container hermes/data/loRA-dataset/local-rocm
-      # builds. It shares state/ (MIOpen kernel caches, user dir) with that
-      # dir's comfy.sh, and writes straight into the Hermes cache
-      comfyImage = "comfy-rocm-780m:v0.39.0";
+      comfyImage = "comfy-rocm-780m:v0.44.0";
       comfyModels = "/home/hunner/models/qwen-image-2.1-int8-comfy";
       comfyRocm = "/home/hunner/hermes/data/loRA-dataset/local-rocm";
-      comfySwap = pkgs.writeShellScript "comfy-swap" ''
+      mkComfy = name: port: pkgs.writeShellScript name ''
         set -u
         export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.gnugrep pkgs.getent ]}
         # The 780M shares system RAM: two ComfyUIs cannot both be resident. A
         # hand-started one (comfy.sh) or another job's wins; fail the swap with
         # a message instead of starting a second one next to it.
-        others=$(${docker} ps --filter ancestor=${comfyImage} --format '{{.Names}}' | grep -vx comfy-swap)
+        others=$(${docker} ps --filter ancestor=${comfyImage} --format '{{.Names}}' | grep -vx ${name})
         if [ -n "$others" ]; then
-          echo "comfy-swap: not starting, ComfyUI already running in: $others" >&2
+          echo "${name}: not starting, ComfyUI already running in: $others" >&2
           exit 1
         fi
         # A leftover from a killed llama-swap would hold the name and port.
-        ${docker} rm -f comfy-swap >/dev/null 2>&1
+        ${docker} rm -f ${name} >/dev/null 2>&1
         # Optional extra container env (e.g. HSA_* ROCm runtime knobs), so
         # those can be tried through llama-swap without a rebuild.
         envf=${comfyRocm}/state/comfy-swap.env
         envarg=()
         if [ -f "$envf" ]; then envarg=(--env-file "$envf"); fi
+        # GPU_PINNED_MIN_XFER_SIZE: make HIP copy host->GPU through its own
+        # staging buffer instead of pinning the source. ComfyUI mmaps model
+        # files private+writable, and pinning them copy-on-writes every 4 KB
+        # page into anon RAM, which crawls while the GPU is busy: a fresh
+        # comfy took ~20 min to load page-cached weights, 25 s with this
+        # (2026-10-28). Also keeps weights in the shared page cache across
+        # container restarts.
         # No --init (it was dropped while chasing a ROCm segfault it turned out
         # not to cause). Python as PID 1 ignores SIGTERM, so stop it with
         # SIGINT (ComfyUI exits in ~2.5 s).
-        exec ${docker} run --rm --stop-signal SIGINT --name comfy-swap \
+        exec ${docker} run --rm --stop-signal SIGINT --name ${name} \
           --user 1000:100 \
           --group-add "$(getent group video | cut -d: -f3)" \
           --group-add "$(getent group render | cut -d: -f3)" \
           --device /dev/kfd --device /dev/dri \
           --security-opt seccomp=unconfined \
-          -e HOME=/state/home "''${envarg[@]}" \
-          -p 127.0.0.1:8189:8188 \
+          -e HOME=/state/home \
+          -e GPU_PINNED_MIN_XFER_SIZE=1000000 \
+          "''${envarg[@]}" \
+          -p 127.0.0.1:${toString port}:8188 \
           -v ${comfyModels}/diffusion_models:/comfyui/models/diffusion_models:ro \
           -v ${comfyModels}/text_encoders:/comfyui/models/text_encoders:ro \
           -v ${comfyModels}/vae:/comfyui/models/vae:ro \
@@ -245,8 +236,10 @@
             --user-directory /state/user --input-directory /state/input \
             --temp-directory /tmp/comfy
       '';
+      comfySwap = mkComfy "comfy-swap" 8189;
+      comfyPhoto = mkComfy "comfy-photo" 8190;
     in {
-      hooks.on_startup.preload = [ "qwen3.5:35b-aggressive" ];
+      hooks.on_startup.preload = [ "qwen3.6:35b-aggressive" ];
       models."qwen3.8:27b-unleashed" = {
         cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen3.8-27B-Unleashed-UD-Q3_K_XL.gguf -c 262144 -ngl 999 -fa 1 --jinja --parallel 1 -b 2048 -ub 512 --cache-reuse 256 --spec-type draft-mtp --spec-draft-n-max 2 --spec-draft-p-min 0.75 --cache-type-k q4_0 --cache-type-v q4_0 --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --repeat-penalty 1.0";
         aliases = [ "unleashed" ];
@@ -255,47 +248,14 @@
         cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen_Qwen3.5-4B-Q5_K_L.gguf -c 65536";
         aliases = [ "qwen" ];
       };
-      models."qwen3.5:35b-aggressive" = {
-        # llama.cpp 0.6 rejects the boolean --mmap flag and exits at once.
-        # --load-mode mmap is that same mode.
-        # --slot-save-path enables POST /slots/<id>?action=save|restore, so
-        # the local-comfy-ani gen script can park the chat's KV state on disk
-        # before ComfyUI evicts this model and load it back afterwards,
-        # instead of re-prefilling a long chat cold.
-        cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen3.5-35B-A3B-Uncensored-HauhauCS-Aggressive-Q5_K_M.gguf -c 131072 --load-mode mmap --gpu-layers 40 -fa 1 --jinja --mmproj ${mmproj35b} ${qwenChatSampling} --slot-save-path /var/lib/llama-swap/slots";
-        aliases = [ "aggressive" ];
-      };
-      # A/B candidate for the entry above: HauhauCS's uncensor of Qwen3.6-35B-A3B
-      # (same qwen35moe architecture and flags). It ships only K_P quants;
-      # Q5_K_P is 6.47 bpw, 28 GB. 3.6's template can keep earlier turns'
-      # thinking (preserve_thinking), which llama-server turns on by default.
-      # Keep it off: in a long chat, old reasoning would feed the ruts and eat
-      # context. (Hermes strips reasoning from history anyway, unless
-      # model.reasoning_echo is set.)
       models."qwen3.6:35b-aggressive" = {
         cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-Q5_K_P.gguf -c 131072 --load-mode mmap --gpu-layers 40 -fa 1 --jinja --no-reasoning-preserve --mmproj ${mmproj36} ${qwenChatSampling} --slot-save-path /var/lib/llama-swap/slots";
-        aliases = [ "aggressive36" ];
+        aliases = [ "aggressive36" "aggressive" ];
       };
-      # Trial chat model for Hermes: Liquid's LFM2.5-24B-A2B with its
-      # refusal direction ablated (AtomicChat). Text only, no mmproj. It is a
-      # reasoning-only model: the embedded template always opens the reply
-      # with <think>, and llama-server splits that into reasoning_content.
-      # Hybrid conv/attention, only 10 of 40 layers keep a KV cache, so the
-      # full 131k context costs ~2.7 GB on top of the 20.9 GB Q6_K, and the
-      # whole model fits the GTT (-ngl 999). Sampling is Liquid's
-      # generation_config (no top_p/min_p there, so those are neutralised).
-      # --slot-save-path for the same chat-cache park/restore as the 35b.
       models."lfm2.5:24b-uncensored" = {
         cmd = "${llamaServer} --port \${PORT} -m /var/lib/llama-swap/models/LFM2.5-24B-A2B-Uncensored-AD-Q6_K.gguf -c 131072 --load-mode mmap -ngl 999 -fa 1 --jinja --temp 0.1 --top-k 50 --top-p 1.0 --min-p 0.0 --repeat-penalty 1.05 --slot-save-path /var/lib/llama-swap/slots";
         aliases = [ "lfm" ];
       };
-      # Image gen for Hermes, which reaches it as
-      # http://ollama-proxy:11434/upstream/comfy/... (the gen script lives in
-      # the local-comfy-ani skill). It is in the one default swap group with
-      # the LLMs: loading it evicts the chat model and vice versa. A client
-      # holds a websocket open for the whole job; llama-swap never evicts a
-      # model with a request in flight, so chat requests queue behind a gen
-      # rather than killing it.
       models."comfy" = {
         unlisted = true;
         cmd = "${comfySwap}";
@@ -305,12 +265,35 @@
         # that.
         cmdStop = "${docker} stop -t 5 comfy-swap";
         unloadTimeout = 60;
-        # Fixed port: ${PORT} is handed out in model-name order, so a new
-        # entry would shift the LLMs' ports.
         proxy = "http://127.0.0.1:8189";
         checkEndpoint = "/system_stats";
-        # Give the RAM back soon after a gen if no chat request swaps it out.
         ttl = 30;
+      };
+      models."comfy-photo" = {
+        unlisted = true;
+        cmd = "${comfyPhoto}";
+        cmdStop = "${docker} stop -t 5 comfy-photo";
+        unloadTimeout = 60;
+        proxy = "http://127.0.0.1:8190";
+        checkEndpoint = "/system_stats";
+        ttl = 900;
+      };
+      routing.router = {
+        use = "group";
+        settings.groups = {
+          # One at a time, and loading any of these evicts every other group
+          # (the previous single-swap-group behaviour).
+          main = {
+            swap = true;
+            exclusive = true;
+            members = [ "qwen3.8:27b-unleashed" "qwen3.5:4b" "lfm2.5:24b-uncensored" "comfy" ];
+          };
+          ani = {
+            swap = false;
+            exclusive = true;
+            members = [ "qwen3.6:35b-aggressive" "comfy-photo" ];
+          };
+        };
       };
     };
   };
@@ -325,9 +308,6 @@
       # 80k-token chat is ~1.6 GB.
       StateDirectory = [ "llama-swap" "llama-swap/slots" ];
       CacheDirectory = "llama-swap";
-      # The comfy entry drives the docker CLI. DynamicUser stays; the docker
-      # group grants the socket, and a private user namespace would map that
-      # group to nobody.
       SupplementaryGroups = [ "docker" ];
       PrivateUsers = lib.mkForce false;
     };
@@ -690,6 +670,7 @@
     hashedPasswordFile = config.sops.secrets.hashedPassword.path;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAqd6VkCyGOaFVfh61+hVKOvYaCZsCChQq3c6rNH/ifG me@hunner.dev"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBickrdxW6Td4IFyHpElh0yLP9dWH5riu0oRgRsM1lpQ hunter.haugen@c1.ai"
     ];
     shell = pkgs.zsh;
     packages = with pkgs; [
