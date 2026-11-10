@@ -38,9 +38,10 @@ let
   # Re-signing the copy with one certificate that outlives the store path is
   # what makes the grants stick, because TCC then records the certificate as
   # the designated requirement instead of the binary's hash. Signing is skipped
-  # when the identity is absent, leaving the store's own ad-hoc signature in
-  # place; kanata still runs, the grants just need redoing on each bump as
-  # before. See the manual steps at the bottom of this file.
+  # when root's keychain has no such identity, leaving the store's own ad-hoc
+  # signature in place; kanata still runs, the grants just need redoing on each
+  # bump as before. Getting the certificate somewhere root can see it is the
+  # fiddly part, so see the manual steps at the bottom of this file.
   kanataStableDir = "/usr/local/libexec/nix-kanata";
   kanataStableBin = "${kanataStableDir}/kanata";
   kanataSigningIdentity = "nix-kanata-signing";
@@ -531,6 +532,7 @@ in
       #"amethyst"
       "arq"
       "claude-code"
+      "claude-devtools"
       "claude"
       "codex"
       "docker-desktop"
@@ -542,7 +544,9 @@ in
       "font-jetbrains-mono-nerd-font"
       "font-hack-nerd-font"
       "ghostty"
+      "grok-bot"
       "grok-build"
+      "handy"
       "homerow"
       "linear"
       "obsidian"
@@ -762,12 +766,48 @@ in
   #      Karabiner-VirtualHIDDevice-Manager. `systemextensionsctl list` should
   #      then read [activated enabled].
   #   2. Put the kanata config at ~/.config/kanata/kanata.kbd.
-  #   3. Create the signing certificate, once. Keychain Access > Certificate
-  #      Assistant > Create a Certificate: name nix-kanata-signing, identity
-  #      type Self Signed Root, certificate type Code Signing, and tick "Let me
-  #      override defaults" only if the System keychain is wanted. The
-  #      activation script signs the copy with it whenever it is present, and
-  #      says so in the rebuild output when it is missing.
+  #   3. Create the signing certificate, once, and land it in the *System*
+  #      keychain as a trusted code-signing root. Both of those are load
+  #      bearing, and skipping either is how this silently failed twice:
+  #      preActivation runs as root, and root's keychain search list omits the
+  #      login keychain, so a cert living only there is invisible to the
+  #      activation script -- measured 2026-11-02, the same
+  #      `security find-identity -v -p codesigning` listed it for hunner and
+  #      reported 0 valid identities for root. Certificate Assistant also emits
+  #      an untrusted cert (CSSMERR_TP_NOT_TRUSTED), and find-identity filters
+  #      those out, which is how a cert can sit in the keychain for a month
+  #      having never once been used.
+  #
+  #      Keychain Access > Certificate Assistant > Create a Certificate: name
+  #      nix-kanata-signing, identity type Self Signed Root, certificate type
+  #      Code Signing. Then double-click it > Trust > Code Signing > Always
+  #      Trust, and right-click > Export to a .p12. The GUI detour is only
+  #      because the CLI has no clean way to export a single identity together
+  #      with its private key. Then:
+  #
+  #        security find-certificate -c nix-kanata-signing -p \
+  #          > /tmp/nix-kanata-signing.pem
+  #        sudo security import ~/Desktop/nix-kanata-signing.p12 \
+  #          -k /Library/Keychains/System.keychain -T /usr/bin/codesign
+  #        sudo security add-trusted-cert -d -r trustRoot -p codeSign \
+  #          -k /Library/Keychains/System.keychain /tmp/nix-kanata-signing.pem
+  #        sudo security find-identity -v -p codesigning
+  #        rm -f ~/Desktop/nix-kanata-signing.p12 /tmp/nix-kanata-signing.pem
+  #
+  #      That sudo find-identity listing the identity is the checkpoint worth
+  #      trusting: everything upstream of it can go wrong quietly, and it is
+  #      the one unambiguous signal that the activation script will sign rather
+  #      than take its fallback branch, which announces itself in the rebuild
+  #      output but scrolls past easily. Run it under sudo; the plain version is
+  #      misleading here, because it can list the identity while root sees an
+  #      empty set. The .p12 holds the private key under only the password
+  #      typed at export, hence the rm. Expect the listing to repeat the same
+  #      fingerprint up to four times: one cert present in both the login and
+  #      System keychains is fine, verified by signing a throwaway binary with
+  #      exactly that arrangement, and only two *different* certs sharing the
+  #      common name would make `codesign --sign nix-kanata-signing` ambiguous
+  #      and fail. This cert expires 2027-10-05, when the whole procedure
+  #      repeats.
   #   4. Grant Input Monitoring to /usr/local/libexec/nix-kanata/kanata. No
   #      prompt will ever appear -- tccd will not raise a dialog for a root
   #      daemon. Add it by hand: System Settings > Privacy & Security > Input
@@ -778,10 +818,25 @@ in
   #   6. `sudo launchctl kickstart -k system/org.nixos.kanata`, then check
   #      /var/log/kanata.log.
   #
-  # Both grants point at a path this config keeps stable across rebuilds, so
-  # they survive a kanata bump once the certificate from step 3 exists. Without
-  # it the copy keeps the store's ad-hoc signature, whose cdhash changes on
-  # every rebuild, and steps 4-6 are needed again each time. Prune stale
-  # /nix/store entries left over from before this change while in those panes;
-  # nothing else does.
+  # Both grants point at a path this config keeps stable across rebuilds, and
+  # once step 3 is really done they also survive a kanata bump, because with a
+  # real identity codesign derives the designated requirement from the
+  # certificate rather than from the code. Verbatim from `codesign -d -r-` on
+  # the signed copy:
+  #
+  #   designated => identifier "org.nixos.kanata" and certificate leaf = H"fa0b987993c26c628319de8b43caa120ff7fbb46"
+  #
+  # There is no cdhash in there, which is the whole point. Under the store's
+  # ad-hoc signature TCC has only the code hash to key on, so every version
+  # bump voids both grants and steps 4-6 come round again.
+  #
+  # Repairing the certificate after a switch has already happened also needs
+  # `sudo rm -f /usr/local/libexec/nix-kanata/.nix-source` before rebuilding.
+  # The guard above deliberately skips the copy-and-sign while the store path
+  # is unchanged, which is what keeps the identity stable, but it means a
+  # rebuild on its own is a no-op for kanata: the binary stays ad-hoc signed
+  # and the switch still looks clean.
+  #
+  # Prune stale /nix/store entries left over from before this change while in
+  # those panes; nothing else does.
 }
